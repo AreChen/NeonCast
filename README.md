@@ -10,6 +10,8 @@ NeonCast 是為《魔獸世界》永恆服製作的玩家施法條插件，以 K
 
 批量製作計數監聽 `C_TradeSkillUI.CraftRecipe`，只有當客戶端提供有效數量，且配方 ID 與施法 ID 一致時才顯示進度，不會猜測未知數量。永恆服的實際 API 行為仍需在遊戲中驗證。
 
+互動法術 `Opening - No Text` 顯示為「開啟中」。可在「延遲文字」頁面開關世界延遲數值，調整大小、顏色，選擇 LibSharedMedia 共享字體或填寫遊戲內字體檔案路徑。
+
 ## 測試
 
 使用 Python 安裝 `lupa` 與 `pytest`，然後執行 `python -m pytest tests`。這些測試不代替遊戲內測試。

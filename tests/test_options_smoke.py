@@ -34,22 +34,22 @@ def test_options_open_navigate_and_close_with_mock_ui():
         UIParent=CreateFrame('UIParent'); Minimap=CreateFrame('Minimap'); GameTooltip=CreateFrame('Tooltip')
         local function noop() end
         local L=setmetatable({}, {__index=function(_,k) return k end})
-        local cfg={width=240,height=21,fontSize=12,cardPadding=9,iconScale=1,glowIntensity=.95,fillOpacity=.22,backgroundOpacity=.96,fadeTime=1,tickWidth=1,borderSize=2,showIcon=true,showLatency=true,showQueue=true,showGlow=true,pulseGlow=true}
+        local cfg={width=240,height=21,fontSize=12,cardPadding=9,iconScale=1,glowIntensity=.95,fillOpacity=.22,backgroundOpacity=.96,fadeTime=1,tickWidth=1,borderSize=2,latencyFontSize=11,showLatencyText=true,showIcon=true,showLatency=true,showQueue=true,showGlow=true,pulseGlow=true}
         local limits={}
-        for _,k in ipairs({'width','height','fontSize','cardPadding','iconScale','glowIntensity','fillOpacity','backgroundOpacity','fadeTime','tickWidth'}) do limits[k]={1,100,1} end
+        for _,k in ipairs({'width','height','fontSize','cardPadding','iconScale','glowIntensity','fillOpacity','backgroundOpacity','fadeTime','tickWidth','latencyFontSize'}) do limits[k]={1,100,1} end
         local bar=CreateFrame('Bar'); bar.px=1
         ns={L=L,CONFIG=cfg,LIMITS=limits,PALETTE={},COLOR_ALPHA={},GetBar=function() return bar end,
             IsDefault=function() return true end,GetQueueMs=function() return 400 end,
             GetPartColor=function() return 1,0,0,0.4 end,
             GetPosition=function() return 0,0 end, GetBarShift=function() return 0 end,
             Range=function() return 1,100 end,SetUnlocked=noop,SetSetting=noop,SetPosition=noop,
-            Redraw=noop,RestoreDefaults=noop,ColorUsable=function() return true end}
+            Redraw=noop,RestoreDefaults=noop,SetLatencyFont=noop,ColorUsable=function() return true end}
         NeonCastDB={config={}}
         function navigate()
             for _, f in ipairs(frames) do
-                if f.kind == 'Button' and f.scripts.OnClick and not f.name then
+                if f.kind == 'Button' and f.scripts.OnClick and not rawget(f, 'name') then
                     -- Navigation buttons have the colored selection marker.
-                    if f.marker then f.scripts.OnClick(f) end
+                    if rawget(f, 'marker') then f.scripts.OnClick(f) end
                 end
             end
         end

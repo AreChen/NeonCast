@@ -360,6 +360,7 @@ local function CreateOptions()
     local appearance = page(L.appearance, 1)
     local layout = page(L.layout, 2)
     local behavior = page(L.behavior, 3)
+    local latencyPage = page(L.latencyPage, 4)
     local function card(parent, top, height, heading)
         local c = CreateFrame("Frame", nil, parent)
         c:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, top); c:SetSize(502, height)
@@ -448,6 +449,57 @@ local function CreateOptions()
     add(MakeColorRow(casting, -215, L.queueColor, "queueColor"))
     add(MakeColorRow(casting, -245, L.latencyColor, "latencyColor"))
     add(MakeColorRow(casting, -275, L.tickColor, "tickColor"))
+
+    local latencyCard = card(latencyPage, 0, 448, L.latencyTitle)
+    add(MakeCheck(latencyCard, -43, L.showLatencyText,
+        function() return CONFIG.showLatencyText end,
+        function(v) ns.SetSetting("showLatencyText", v) end))
+    slider(latencyCard, -75, "latencyFontSize", L.latencyFontSize)
+    add(MakeColorRow(latencyCard, -112, L.latencyTextColor, "latencyTextColor"))
+    label(latencyCard, L.latencyFont, "GameFontHighlight", 16, -163)
+    local pathBox = CreateFrame("EditBox", nil, latencyCard, "InputBoxTemplate")
+    pathBox:SetSize(390, 24); pathBox:SetPoint("TOPLEFT", latencyCard, "TOPLEFT", 18, -237)
+    pathBox:SetAutoFocus(false); pathBox:SetMaxLetters(255)
+    local pathLabel = label(latencyCard, L.fontPath, "GameFontHighlightSmall", 16, -214, {0.62,0.66,0.71})
+    function pathBox.Refresh() pathBox:SetText(NeonCastDB.latencyFont or "") end
+    widgets[#widgets + 1] = pathBox
+    pathBox:SetScript("OnEnterPressed", function(self)
+        ns.SetLatencyFont(self:GetText()); self:ClearFocus(); self.Refresh(); UpdateReset()
+    end)
+    pathBox:SetScript("OnEscapePressed", function(self) self:ClearFocus(); self.Refresh() end)
+    pathBox:SetScript("OnEditFocusLost", function(self) self.Refresh() end)
+    local resetFont = CreateFrame("Button", nil, latencyCard, "UIPanelButtonTemplate")
+    resetFont:SetSize(140,24); resetFont:SetPoint("TOPLEFT", latencyCard, "TOPLEFT", 18, -277)
+    resetFont:SetText(L.defaultFont)
+    resetFont:SetScript("OnClick", function() ns.SetLatencyFont(""); pathBox.Refresh(); UpdateReset() end)
+    label(latencyCard, L.latencyHint, "GameFontHighlightSmall", 16, -331, {0.62,0.66,0.71})
+
+    -- SharedMedia is optional. Manual paths and the game's font remain available without it.
+    if UIDropDownMenu_Initialize and UIDropDownMenu_CreateInfo and UIDropDownMenu_AddButton then
+        local dropdown = CreateFrame("Frame", "NeonCastLatencyFontDropdown", latencyCard, "UIDropDownMenuTemplate")
+        dropdown:SetPoint("TOPLEFT", latencyCard, "TOPLEFT", 135, -148)
+        if UIDropDownMenu_SetWidth then UIDropDownMenu_SetWidth(dropdown, 240) end
+        if UIDropDownMenu_SetText then UIDropDownMenu_SetText(dropdown, L.latencyFont) end
+        UIDropDownMenu_Initialize(dropdown, function()
+            local default = UIDropDownMenu_CreateInfo()
+            default.text = L.defaultFont
+            default.func = function() ns.SetLatencyFont(""); pathBox.Refresh(); UpdateReset() end
+            UIDropDownMenu_AddButton(default)
+            local ok, media = pcall(function() return LibStub and LibStub("LibSharedMedia-3.0", true) end)
+            if ok and media and media.List and media.Fetch then
+                for _, name in ipairs(media:List("font")) do
+                    local fontName = name
+                    local info = UIDropDownMenu_CreateInfo()
+                    info.text = fontName
+                    info.func = function()
+                        local path = media:Fetch("font", fontName, true)
+                        if path then ns.SetLatencyFont(path); pathBox.Refresh(); UpdateReset() end
+                    end
+                    UIDropDownMenu_AddButton(info)
+                end
+            end
+        end)
+    end
 
     local reset = CreateFrame("Button", nil, side, "UIPanelButtonTemplate")
     reset:SetSize(138, 26); reset:SetPoint("BOTTOM", side, "BOTTOM", 0, 45); reset:SetText(L.reset)

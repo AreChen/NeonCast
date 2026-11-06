@@ -21,6 +21,7 @@ local CONFIG = {
     borderColor = "black",
     cardPadding = 9, iconScale = 1, glowIntensity = 0.95, fillOpacity = 0.22, backgroundOpacity = 0.96,
     showGlow = true, pulseGlow = true,
+    showLatencyText = true, latencyFontSize = 11, latencyTextColor = "white",
     showIcon = true, -- spell icon to the left of the bar, sharing the bar's left border
     showQueue = true, -- draw the spell queue window zone at the end of the cast
     showLatency = true, -- draw the world latency zone at the end of the cast
@@ -40,6 +41,7 @@ local FONT_ROOM = 3
 -- The settings the options window can change, with their allowed ranges { min, max, step }.
 -- They are saved in NeonCastDB.config, and the values above are the defaults.
 local LIMITS = {
+    latencyFontSize = { 8, 24, 1 },
     cardPadding = { 3, 22, 1 },
     iconScale = { 0.5, 1.5, 0.05 },
     glowIntensity = { 0, 1, 0.05 },
@@ -52,7 +54,7 @@ local LIMITS = {
     borderSize = { 0, 4, 1 },
     fadeTime   = { 0, 2, 0.1 },
 }
-local TOGGLES = { "showIcon", "showQueue", "showLatency", "showGlow", "pulseGlow" }
+local TOGGLES = { "showIcon", "showQueue", "showLatency", "showGlow", "pulseGlow", "showLatencyText" }
 
 -- The colors the options offer for the zones, ticks and border. None is close to a school color, so these
 -- parts never blend into the bar's fill. `only` limits an entry to some parts: dark colors are hard to see as a
@@ -76,8 +78,8 @@ for _, e in ipairs(PALETTE) do PALETTE_BY_KEY[e.key] = e end
 
 -- The parts whose color can be picked, in the options' order, with their fixed opacity. A color is the palette
 -- entry together with that opacity, so two parts can only clash when their opacities match (the two zones).
-local COLOR_PARTS = { "queueColor", "latencyColor", "tickColor", "borderColor" }
-local COLOR_ALPHA = { queueColor = 0.4, latencyColor = 0.4, tickColor = 0.9, borderColor = 1 }
+local COLOR_PARTS = { "queueColor", "latencyColor", "tickColor", "borderColor", "latencyTextColor" }
+local COLOR_ALPHA = { queueColor = 0.4, latencyColor = 0.4, tickColor = 0.9, borderColor = 1, latencyTextColor = 1 }
 
 local DEFAULTS = {}
 for key in pairs(LIMITS) do DEFAULTS[key] = CONFIG[key] end
@@ -745,7 +747,25 @@ end
 -- (the same distance from the whole-pixel line and from the half-pixel line) makes the result always the same.
 local TEXT_SHIFT = 0.25
 
+local function ApplyLatencyStyle(bar)
+    if not bar.latencyText then return end
+    local fallback = GameFontHighlight:GetFont()
+    local path = NeonCastDB and NeonCastDB.latencyFont or fallback
+    local ok, applied = pcall(bar.latencyText.SetFont, bar.latencyText, path, CONFIG.latencyFontSize, "OUTLINE")
+    if not ok or applied == false then bar.latencyText:SetFont(fallback, CONFIG.latencyFontSize, "OUTLINE") end
+    bar.latencyText:SetTextColor(PartColor("latencyTextColor"))
+    bar.latencyText:ClearAllPoints()
+    bar.latencyText:SetPoint("LEFT", bar, "RIGHT", (bar.neonRing and CONFIG.cardPadding or 2) + 8, 0)
+    bar.latencyText:SetShown(CONFIG.showLatencyText)
+    bar.lastLatencyUpdate = nil
+end
+
 local function UpdateValue(bar, now)
+    if bar.latencyText and CONFIG.showLatencyText and (not bar.lastLatencyUpdate or now - bar.lastLatencyUpdate >= 1) then
+        local latency = GetLatency()
+        if Plain(latency) then bar.latencyText:SetText(string.format("%d ms", math.floor(latency * 1000 + 0.5))) end
+        bar.lastLatencyUpdate = now
+    end
     local elapsed = now - bar.startTime
     if elapsed < 0 then elapsed = 0 end
     if elapsed > bar.total then elapsed = bar.total end
@@ -839,6 +859,13 @@ local function SetName(bar, name)
         fs:ClearAllPoints()
         fs:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", padX + px * TEXT_SHIFT, bar.textY + px * TEXT_SHIFT)
     end
+end
+
+function ns.DisplayCastName(name, spellID)
+    if spellID == 22810 or name == "Opening - No Text" then
+        return (ns.L and ns.L.opening) or OPENING or "Opening"
+    end
+    return name
 end
 
 local Refresh
@@ -956,7 +983,8 @@ Refresh = function(bar, event, castGUID)
     bar.tickCount = channel and TickCount(name, bar.total) or 0
     EnsurePixelGrid(bar)
     local progress = ns.CraftProgress.Label(spellID)
-    SetName(bar, progress and (name .. " " .. progress) or name)
+    local displayName = ns.DisplayCastName(name, spellID)
+    SetName(bar, progress and (displayName .. " " .. progress) or displayName)
     SetSafeZone(bar)
 
     ApplyColor(bar)
@@ -1009,7 +1037,8 @@ local function ShowHiddenCast(bar, name, spellID, duration, castGUID)
     bar.lastStr = nil
     EnsurePixelGrid(bar)
     local progress = ns.CraftProgress.Label(spellID)
-    SetName(bar, progress and (name .. " " .. progress) or name)
+    local displayName = ns.DisplayCastName(name, spellID)
+    SetName(bar, progress and (displayName .. " " .. progress) or displayName)
     SetSafeZone(bar)
     ApplyColor(bar)
     SetTicks(bar, 0)
@@ -1316,6 +1345,8 @@ local function CreateBar(unit)
     bar.overlay = CreateFrame("Frame", nil, bar)
     bar.overlay:SetAllPoints()
     bar.overlay:SetFrameLevel(bar:GetFrameLevel() + 3)
+    bar.latencyText = bar.overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ApplyLatencyStyle(bar)
     bar.queueZone = bar:CreateTexture(nil, "BACKGROUND", nil, 1)
     bar.queueZone:SetColorTexture(PartColor("queueColor"))
     bar.queueZone:Hide()
@@ -1440,6 +1471,7 @@ function ApplySettings(bar)
     ApplyPartColors(bar)
     SnapBar(bar, bar.unit)
     CreateBorder(bar)
+    ApplyLatencyStyle(bar)
     local nameW = bar:GetWidth() - 2 * CONFIG.textPadding - TimeReserve()
     bar.nameText:SetWidth(nameW)
     bar.nameOutline:SetWidth(nameW)
@@ -1517,7 +1549,7 @@ function ns.IsDefault()
         local p, px = CONFIG.point.player, PixelSize(UIParent)
         if saved.x ~= math.floor(p[4] / px + 0.5) or saved.y ~= math.floor(p[5] / px + 0.5) then return false end
     end
-    if NeonCastDB and (NeonCastDB.accent or NeonCastDB.useThemeColor) then return false end
+    if NeonCastDB and (NeonCastDB.accent or NeonCastDB.useThemeColor or NeonCastDB.latencyFont) then return false end
     return GetQueueMs() == 400
 end
 
@@ -1545,6 +1577,14 @@ function ns.SetSetting(key, value)
     if bar then ApplySettings(bar) end
 end
 
+function ns.SetLatencyFont(path)
+    if type(path) ~= "string" or #path > 512 then return end
+    path = path:match("^%s*(.-)%s*$")
+    NeonCastDB.latencyFont = path ~= "" and path or nil
+    local bar = bars.player
+    if bar then ApplyLatencyStyle(bar); if bar.unlocked then ShowDemo(bar) end end
+end
+
 -- Redraws the preview, for changes that are not in CONFIG (the game's spell queue window).
 function ns.Redraw()
     local bar = bars.player
@@ -1555,7 +1595,7 @@ function ns.RestoreDefaults()
     for key, value in pairs(DEFAULTS) do CONFIG[key] = value end
     NeonCastDB.config = {}
     NeonCastDB.pos = nil
-    NeonCastDB.accent, NeonCastDB.useThemeColor = nil, nil
+    NeonCastDB.accent, NeonCastDB.useThemeColor, NeonCastDB.latencyFont = nil, nil, nil
     SetQueueMs(400) -- the game's default spell queue window
     local bar = bars.player
     if bar then ApplySettings(bar) end
