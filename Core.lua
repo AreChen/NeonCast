@@ -19,6 +19,8 @@ local CONFIG = {
     textGap = 0, -- empty space (in pixels) kept around the text where ticks are cut
     borderSize  = 2, -- border thickness in physical screen pixels (0 = no border)
     borderColor = "black",
+    cardPadding = 9, iconScale = 1, glowIntensity = 0.95, fillOpacity = 0.22, backgroundOpacity = 0.96,
+    showGlow = true, pulseGlow = true,
     showIcon = true, -- spell icon to the left of the bar, sharing the bar's left border
     showQueue = true, -- draw the spell queue window zone at the end of the cast
     showLatency = true, -- draw the world latency zone at the end of the cast
@@ -38,6 +40,11 @@ local FONT_ROOM = 3
 -- The settings the options window can change, with their allowed ranges { min, max, step }.
 -- They are saved in NeonCastDB.config, and the values above are the defaults.
 local LIMITS = {
+    cardPadding = { 3, 22, 1 },
+    iconScale = { 0.5, 1.5, 0.05 },
+    glowIntensity = { 0, 1, 0.05 },
+    fillOpacity = { 0, 1, 0.05 },
+    backgroundOpacity = { 0.2, 1, 0.05 },
     width      = { 160, 480, 1 },
     height     = { 11, 42, 1 },
     fontSize   = { 8, 24, 1 },
@@ -45,7 +52,7 @@ local LIMITS = {
     borderSize = { 0, 4, 1 },
     fadeTime   = { 0, 2, 0.1 },
 }
-local TOGGLES = { "showIcon", "showQueue", "showLatency" }
+local TOGGLES = { "showIcon", "showQueue", "showLatency", "showGlow", "pulseGlow" }
 
 -- The colors the options offer for the zones, ticks and border. None is close to a school color, so these
 -- parts never blend into the bar's fill. `only` limits an entry to some parts: dark colors are hard to see as a
@@ -542,7 +549,16 @@ local function PaintNeon(bar)
     if not bar.neonRing then return end
     local c = NeonCastDB and NeonCastDB.accent or {r=0.67, g=0.83, b=0.45}
     bar.neonRing:SetVertexColor(c.r, c.g, c.b, 0.65)
-    bar.neonGlow:SetVertexColor(c.r, c.g, c.b, 0.95)
+    bar.neonGlow:SetVertexColor(c.r, c.g, c.b, CONFIG.glowIntensity)
+    bar.neonGlow:SetShown(CONFIG.showGlow)
+    if CONFIG.showGlow and CONFIG.pulseGlow then
+        if not bar.neonAnimation:IsPlaying() then bar.neonAnimation:Play() end
+    else
+        bar.neonAnimation:Stop()
+        bar.neonGlow:SetAlpha(1)
+    end
+    bar.neonBack:SetVertexColor(0.025, 0.03, 0.04, CONFIG.backgroundOpacity)
+    if bar.fill then bar.fill:SetAlpha(CONFIG.fillOpacity) end
     bar.neonStripe:SetColorTexture(c.r, c.g, c.b, 1)
 end
 
@@ -1144,8 +1160,9 @@ local function CreateBorder(bar)
     if bar.icon then
         bar.icon:SetShown(iconOn)
         bar.icon:ClearAllPoints()
-        bar.icon:SetSize(h, h)
-        bar.icon:SetPoint("TOPRIGHT", bar, "TOPLEFT", -b, 0)
+        local iconSize = bar.neonRing and h * CONFIG.iconScale or h
+        bar.icon:SetSize(iconSize, iconSize)
+        bar.icon:SetPoint("RIGHT", bar, "LEFT", -b - (bar.neonRing and 3 or 0), 0)
     end
 
     if bar.neonRing then
@@ -1153,8 +1170,11 @@ local function CreateBorder(bar)
         local left = iconOn and bar.icon or bar
         for _, texture in ipairs({bar.neonBack, bar.neonRing}) do
             texture:ClearAllPoints()
-            texture:SetPoint("TOPLEFT", left, "TOPLEFT", iconOn and -14 or -10, 9)
-            texture:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 10, -9)
+            local pad = CONFIG.cardPadding
+            local extra = iconOn and math.max(0, (bar.icon:GetHeight() - h) / 2) or 0
+            local top = iconOn and (pad + (h - bar.icon:GetHeight()) / 2 + extra) or pad
+            texture:SetPoint("TOPLEFT", left, "TOPLEFT", iconOn and -14 or -pad, top)
+            texture:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", pad, -pad - extra)
         end
         bar.neonGlow:ClearAllPoints()
         bar.neonGlow:SetPoint("TOPLEFT", bar.neonBack, "TOPLEFT", -12, 12)
@@ -1237,6 +1257,7 @@ local function CreateBar(unit)
         bar.neonStripe = bar:CreateTexture(nil, "ARTWORK", nil, 2)
         bar.neonStripe:SetWidth(3)
         local animation = bar.neonGlow:CreateAnimationGroup()
+        bar.neonAnimation = animation
         animation:SetLooping("BOUNCE")
         local pulse = animation:CreateAnimation("Alpha")
         pulse:SetFromAlpha(0.45)
@@ -1257,7 +1278,7 @@ local function CreateBar(unit)
     -- reveals more or less of them as the cast progresses.
     bar.fill = CreateFrame("Frame", nil, bar)
     bar.fill:SetClipsChildren(true)
-    if bar.neonRing then bar.fill:SetAlpha(0.22) end
+    if bar.neonRing then bar.fill:SetAlpha(CONFIG.fillOpacity) end
     bar.fill:SetPoint("TOPLEFT", bar, "TOPLEFT")
     bar.fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT")
     bar.fill:SetWidth(0.01)
@@ -1485,6 +1506,7 @@ function ns.IsDefault()
         local p, px = CONFIG.point.player, PixelSize(UIParent)
         if saved.x ~= math.floor(p[4] / px + 0.5) or saved.y ~= math.floor(p[5] / px + 0.5) then return false end
     end
+    if NeonCastDB and (NeonCastDB.accent or NeonCastDB.useThemeColor) then return false end
     return GetQueueMs() == 400
 end
 

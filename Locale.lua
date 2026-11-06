@@ -23,5 +23,13 @@ local cn = {
     latencyColor="延迟区域颜色", tickColor="刻度颜色", borderColor="边框颜色",
     x="水平位置（像素）", y="垂直位置（像素）", reset="恢复默认", hint="拖动施法条移动位置；关闭窗口后锁定。"
 }
+local extra = {
+    en = { appearance="Appearance", layout="Layout", behavior="Casting", subtitle="PERSONAL CAST BAR", description="Customize your cast bar", accentTitle="ACCENT COLOR", cardTitle="CARD & GLOW", geometryTitle="SIZE & POSITION", behaviorTitle="CASTING & INDICATORS", cardPadding="Card padding", iconScale="Icon scale", glowIntensity="Glow intensity", fillOpacity="Progress opacity", backgroundOpacity="Background opacity", showGlow="Show glow", pulseGlow="Pulse glow", about="Changes preview instantly. Drag the cast bar to move it.", presets="Presets", version="FOREVER EDITION", resetHint="Reset all settings and the game's spell queue window." },
+    tw = { appearance="外觀主題", layout="尺寸與位置", behavior="施法行為", subtitle="個人施法條", description="打造專屬於你的施法條", accentTitle="主題強調色", cardTitle="卡片與光暈", geometryTitle="尺寸與位置", behaviorTitle="施法與指示", cardPadding="卡片內距", iconScale="圖標大小", glowIntensity="光暈強度", fillOpacity="進度透明度", backgroundOpacity="背景透明度", showGlow="顯示光暈", pulseGlow="光暈呼吸效果", about="修改立即預覽；拖動施法條可調整位置。", presets="預設色", version="永恆服專用", resetHint="重置所有設置及遊戲的施法佇列時間。" },
+    cn = { appearance="外观主题", layout="尺寸与位置", behavior="施法行为", subtitle="个人施法条", description="打造专属于你的施法条", accentTitle="主题强调色", cardTitle="卡片与光晕", geometryTitle="尺寸与位置", behaviorTitle="施法与指示", cardPadding="卡片内距", iconScale="图标大小", glowIntensity="光晕强度", fillOpacity="进度透明度", backgroundOpacity="背景透明度", showGlow="显示光晕", pulseGlow="光晕呼吸效果", about="修改立即预览；拖动施法条可调整位置。", presets="预设色", version="永恒服专用", resetHint="重置所有设置及游戏的施法队列时间。" },
+}
 local locale = GetLocale and GetLocale() or "enUS"
 ns.L = locale == "zhTW" and tw or locale == "zhCN" and cn or en
+
+local more = locale == "zhTW" and extra.tw or locale == "zhCN" and extra.cn or extra.en
+for key, value in pairs(more) do ns.L[key] = value end

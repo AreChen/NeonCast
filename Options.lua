@@ -4,7 +4,7 @@
 local _, ns = ...
 local CONFIG, LIMITS = ns.CONFIG, ns.LIMITS
 
-local FRAME_W, FRAME_H = 392, 646
+local FRAME_W = 470
 local ICON = "Interface\\AddOns\\NeonCast\\Icons\\ChromaCast"
 
 local frame
@@ -55,8 +55,8 @@ local function MakeSlider(parent, y, text, min, max, step, decimals, get, set, t
     -- The row takes the mouse so the label shows the tooltip; a drag on it still moves the window.
     row:EnableMouse(true)
     row:RegisterForDrag("LeftButton")
-    row:SetScript("OnDragStart", function() parent:StartMoving() end)
-    row:SetScript("OnDragStop", function() parent:StopMovingOrSizing() end)
+    row:SetScript("OnDragStart", function() if frame then frame:StartMoving() end end)
+    row:SetScript("OnDragStop", function() if frame then frame:StopMovingOrSizing() end end)
 
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     label:SetPoint("LEFT", row, "LEFT", 16, 0)
@@ -64,10 +64,15 @@ local function MakeSlider(parent, y, text, min, max, step, decimals, get, set, t
     label:SetJustifyH("LEFT")
     label:SetText(text)
 
-    local minus = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    local function smallButton(text)
+        local button = CreateFrame("Button", nil, row)
+        local bg = button:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.16,0.18,0.21,1)
+        local t = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); t:SetPoint("CENTER"); t:SetText(text)
+        return button
+    end
+    local minus = smallButton("-")
     minus:SetSize(20, 20)
     minus:SetPoint("LEFT", row, "LEFT", 150, 0)
-    minus:SetText("-")
 
     local slider = CreateFrame("Slider", nil, row)
     slider:SetOrientation("HORIZONTAL")
@@ -85,15 +90,17 @@ local function MakeSlider(parent, y, text, min, max, step, decimals, get, set, t
     track:SetPoint("LEFT")
     track:SetPoint("RIGHT")
     track:SetHeight(4)
-    slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-    slider:GetThumbTexture():SetSize(18, 18)
+    slider:SetThumbTexture("Interface\\Buttons\\WHITE8x8")
+    slider:GetThumbTexture():SetSize(8, 16)
+    slider:GetThumbTexture():SetVertexColor(0.67, 0.83, 0.45, 1)
 
-    local plus = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    local plus = smallButton("+")
     plus:SetSize(20, 20)
     plus:SetPoint("LEFT", row, "LEFT", 304, 0)
-    plus:SetText("+")
 
-    local edit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+    local edit = CreateFrame("EditBox", nil, row)
+    edit:SetFontObject(GameFontHighlightSmall)
+    local editBg = edit:CreateTexture(nil, "BACKGROUND"); editBg:SetAllPoints(); editBg:SetColorTexture(0.035,0.04,0.05,1)
     edit:SetSize(44, 20)
     edit:SetPoint("LEFT", row, "LEFT", 336, 0)
     edit:SetAutoFocus(false)
@@ -151,19 +158,26 @@ end
 
 -- `tip` is the tooltip text, shown over the check box.
 local function MakeCheck(parent, y, text, get, set, tip)
-    local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    cb:SetSize(24, 24)
-    cb:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
+    local cb = CreateFrame("Button", nil, parent)
+    cb:SetSize(38, 22)
+    cb:SetPoint("TOPLEFT", parent, "TOPLEFT", 400, y)
+    local track = cb:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints()
+    local knob = cb:CreateTexture(nil, "ARTWORK")
+    knob:SetSize(14, 14)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    label:SetPoint("LEFT", cb, "RIGHT", 4, 1)
+    label:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, y - 4)
     label:SetText(text)
-    -- The label is part of the button: hovering it shows the tooltip and clicking it toggles the box.
-    cb:SetHitRectInsets(0, -(label:GetStringWidth() + 4), 0, 0)
-    cb:SetScript("OnClick", function(self)
-        set(self:GetChecked() and true or false)
-        UpdateReset()
-    end)
-    function cb.Refresh() cb:SetChecked(get()) end
+    local function paint()
+        local on = get() and true or false
+        local c = NeonCastDB.accent or {r=0.67,g=0.83,b=0.45}
+        if on then track:SetColorTexture(c.r,c.g,c.b,0.75) else track:SetColorTexture(0.22,0.24,0.28,1) end
+        knob:ClearAllPoints()
+        knob:SetPoint("LEFT", cb, "LEFT", on and 20 or 4, 0)
+        knob:SetColorTexture(0.95,0.96,0.97,1)
+    end
+    cb:SetScript("OnClick", function() set(not get()); paint(); UpdateReset() end)
+    function cb.Refresh() paint() end
     if tip then AddTooltip(cb, { cb }, text, tip, parent) end
     return cb
 end
@@ -186,8 +200,8 @@ local function MakeColorRow(parent, y, text, part, tip)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
     row:EnableMouse(true)
     row:RegisterForDrag("LeftButton")
-    row:SetScript("OnDragStart", function() parent:StartMoving() end)
-    row:SetScript("OnDragStop", function() parent:StopMovingOrSizing() end)
+    row:SetScript("OnDragStart", function() if frame then frame:StartMoving() end end)
+    row:SetScript("OnDragStop", function() if frame then frame:StopMovingOrSizing() end end)
 
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     label:SetPoint("LEFT", row, "LEFT", 16, 0)
@@ -267,12 +281,14 @@ local function PositionLimits()
     local w, h = bar:GetWidth(), bar:GetHeight()
     local b = math.max(0, math.floor(CONFIG.borderSize + 0.5)) * px
     local shift = ns.GetBarShift() -- Y is where the text is, and the bar's center can sit above or below that
-    local left = b -- the bar's left border
-    if CONFIG.showIcon then left = left + h + b end -- the icon is as wide as the bar is tall, plus its own left border
+    local padding = CONFIG.cardPadding or b
+    local left = padding
+    if CONFIG.showIcon then left = h * (CONFIG.iconScale or 1) + b + 17 end
+    local vertical = math.max(h, CONFIG.showIcon and h * (CONFIG.iconScale or 1) or h) / 2 + padding
     return math.ceil((-W / 2 + w / 2 + left) / px),
-           math.floor((W / 2 - w / 2 - b) / px),
-           math.ceil((-H / 2 + h / 2 + b) / px - shift),
-           math.floor((H / 2 - h / 2 - b) / px - shift)
+           math.floor((W / 2 - w / 2 - padding) / px),
+           math.ceil((-H / 2 + vertical) / px - shift),
+           math.floor((H / 2 - vertical) / px - shift)
 end
 
 -- Recomputes the limits and pulls the bar back inside them, after a change in size, border or icon.
@@ -291,8 +307,9 @@ end
 -- The options window
 ------------------------------------------------------------------------
 local function CreateOptions()
+    local L = ns.L
     local f = CreateFrame("Frame", "NeonCastOptions", UIParent)
-    f:SetSize(FRAME_W, FRAME_H)
+    f:SetSize(720, 560)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
     f:SetMovable(true)
@@ -302,211 +319,177 @@ local function CreateOptions()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     f:Hide()
 
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0.043, 0.047, 0.055, 0.97)
-    local function edge(p1, p2, w, h)
-        local t = f:CreateTexture(nil, "BORDER")
-        t:SetColorTexture(0.18, 0.19, 0.23, 1)
-        t:SetPoint(p1)
-        t:SetPoint(p2)
-        if w then t:SetWidth(w) else t:SetHeight(h) end
-    end
-    edge("TOPLEFT", "TOPRIGHT", nil, 1)
-    edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, 1)
-    edge("TOPLEFT", "BOTTOMLEFT", 1, nil)
-    edge("TOPRIGHT", "BOTTOMRIGHT", 1, nil)
-
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", f, "TOP", 0, -14)
-    title:SetText("NeonCast")
-
-    title:SetTextColor(0.67, 0.83, 0.45)
-    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", f, "TOPRIGHT", 2, 2)
-
-    local function add(w) widgets[#widgets + 1] = w return w end
-    local L = LIMITS
-
-    add(MakeSlider(f, -44, ns.L.width, L.width[1], L.width[2], L.width[3], 0,
-        function() return CONFIG.width end,
-        function(v) ns.SetSetting("width", v) RefreshPosition() end,
-        "Length of the cast bar. The spell icon is added to its left and is not counted."))
-    -- Height and font size limit each other (the text must fit in the bar), so their ranges are read live.
-    heightRow = add(MakeSlider(f, -72, ns.L.height,
-        function() return (ns.Range("height")) end,
-        function() local _, hi = ns.Range("height") return hi end, L.height[3], 0,
-        function() return CONFIG.height end,
-        function(v) ns.SetSetting("height", v) fontRow.Refresh() RefreshPosition() end,
-        "Thickness of the cast bar. The spell icon is always as tall as the bar, and the text stays in place. It can't go lower than the font size allows."))
-    fontRow = add(MakeSlider(f, -100, ns.L.fontSize,
-        function() return (ns.Range("fontSize")) end,
-        function() local _, hi = ns.Range("fontSize") return hi end, L.fontSize[3], 0,
-        function() return CONFIG.fontSize end,
-        function(v) ns.SetSetting("fontSize", v) heightRow.Refresh() RefreshPosition() end,
-        "Size of the spell name and time. The text stays centered in the bar, and the largest size depends on the bar's height."))
-    add(MakeSlider(f, -128, ns.L.tickWidth, L.tickWidth[1], L.tickWidth[2], L.tickWidth[3], 0,
-        function() return CONFIG.tickWidth end,
-        function(v) ns.SetSetting("tickWidth", v) end,
-        "Width of the markers that split channeled spells into their ticks. 0 hides them."))
-    add(MakeSlider(f, -156, ns.L.border, L.borderSize[1], L.borderSize[2], L.borderSize[3], 0,
-        function() return CONFIG.borderSize end,
-        function(v) ns.SetSetting("borderSize", v) RefreshPosition() end,
-        "Thickness of the black border around the bar and the icon, in screen pixels. 0 removes it."))
-    add(MakeSlider(f, -184, ns.L.fade, L.fadeTime[1], L.fadeTime[2], L.fadeTime[3], 1,
-        function() return CONFIG.fadeTime end,
-        function(v) ns.SetSetting("fadeTime", v) end,
-        "Seconds the bar takes to fade out after a cast ends, is interrupted or fails. 0 hides it at once."))
-
-    add(MakeCheck(f, -218, ns.L.icon,
-        function() return CONFIG.showIcon end,
-        function(on)
-            ns.SetSetting("showIcon", on)
-            RefreshPosition()
-        end,
-        "Shows the spell's icon to the left of the bar."))
-    add(MakeCheck(f, -246, ns.L.latency,
-        function() return CONFIG.showLatency end,
-        function(on) ns.SetSetting("showLatency", on) end,
-        "Shades the end of the cast by your world latency: roughly how long the server takes to see your next key press."))
-    add(MakeCheck(f, -274, ns.L.queue,
-        function() return CONFIG.showQueue end,
-        function(on)
-            ns.SetSetting("showQueue", on)
-            queueRow.SetEnabled(on)
-        end,
-        "Shades the end of the cast by the spell queue window: a spell pressed in that zone waits for the cast to finish instead of failing. Not shown on channels: a spell pressed during a channel cancels it."))
-    -- This one changes the game's own SpellQueueWindow setting, not just the drawing.
-    queueRow = add(MakeSlider(f, -302, ns.L.queueWindow, 0, 400, 10, 0,
-        function() return ns.GetQueueMs() end,
-        function(v)
-            ns.SetQueueMs(v)
-            ns.Redraw()
-            local actual = ns.GetQueueMs()
-            if actual ~= v then queueRow.Display(actual) end -- the game kept a different value
-        end,
-        "Changes the game's own Spell Queue Window setting, not just the drawing: how early a spell can be pressed before the current cast ends. Game default: 400 ms."))
-
-    add(MakeColorRow(f, -334, ns.L.queueColor, "queueColor",
-        "Color of the spell queue zone. Since the two zones sit side by side, it can't be the latency zone's color or one too close to it."))
-    add(MakeColorRow(f, -358, ns.L.latencyColor, "latencyColor",
-        "Color of the latency zone. Since the two zones sit side by side, it can't be the queue zone's color or one too close to it."))
-    add(MakeColorRow(f, -382, ns.L.tickColor, "tickColor",
-        "Color of the tick markers on channeled spells."))
-    add(MakeColorRow(f, -406, ns.L.borderColor, "borderColor",
-        "Color of the border around the bar and the icon."))
-
-    xRow = add(MakeSlider(f, -446, ns.L.x,
-        function() local minX = PositionLimits() return minX end,
-        function() local _, maxX = PositionLimits() return maxX end, 1, 0,
-        function() local x = ns.GetPosition() return x end,
-        function(v) local _, y = ns.GetPosition() ns.SetPosition(v, y) end,
-        "Horizontal position of the bar, in screen pixels from the center of the screen. You can also drag the bar while this window is open."))
-    yRow = add(MakeSlider(f, -474, ns.L.y,
-        function() local _, _, minY = PositionLimits() return minY end,
-        function() local _, _, _, maxY = PositionLimits() return maxY end, 1, 0,
-        function() local _, y = ns.GetPosition() return y end,
-        function(v) local x = ns.GetPosition() ns.SetPosition(x, v) end,
-        "Vertical position of the bar's text, in screen pixels from the center of the screen. You can also drag the bar while this window is open."))
-
-    local useTheme
-    local reset = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    reset:SetSize(150, 24)
-    reset:SetPoint("TOP", f, "TOP", 0, -516)
-    reset:SetText(ns.L.reset)
-    resetButton = reset
-    reset:SetScript("OnClick", function()
-        ns.RestoreDefaults()
-        title:SetTextColor(0.67, 0.83, 0.45)
-        if useTheme then useTheme:SetChecked(false) end
-        RefreshAll()
-    end)
-    reset:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("Restore defaults", 1, 1, 1)
-        GameTooltip:AddLine("Resets every setting here, the bar's position, and the game's spell queue window (400 ms).", nil, nil, nil, true)
-        GameTooltip:Show()
-    end)
-    reset:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    hint:SetPoint("TOP", f, "TOP", 0, -550)
-    hint:SetText(ns.L.hint)
-
-    local themeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    themeLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -580)
-    themeLabel:SetText(ns.L.theme)
-    local picker = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    picker:SetSize(110, 22)
-    picker:SetPoint("TOPLEFT", f, "TOPLEFT", 145, -576)
-    picker:SetText(ns.L.chooseColor)
-    picker:SetScript("OnClick", function()
-        local c = NeonCastDB.accent or { r = 0.67, g = 0.83, b = 0.45 }
-        local function apply()
-            local r, g, b = ColorPickerFrame:GetColorRGB()
-            NeonCastDB.accent = {r=r, g=g, b=b}
-            title:SetTextColor(r, g, b)
-            ns.Redraw()
-        end
-        if ColorPickerFrame.SetupColorPickerAndShow then
-            ColorPickerFrame:SetupColorPickerAndShow({r=c.r,g=c.g,b=c.b,swatchFunc=apply})
+    local function surface(parent, r, g, b, a)
+        local t = parent:CreateTexture(nil, "BACKGROUND")
+        t:SetAllPoints()
+        if t.SetTextureSliceMargins then
+            t:SetTexture("Interface\\AddOns\\NeonCast\\Media\\NeonBack")
+            t:SetTextureSliceMargins(16,16,16,16)
+            if t.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+                t:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+            end
+            t:SetVertexColor(r,g,b,a)
         else
-            ColorPickerFrame.func = apply
-            ColorPickerFrame:SetColorRGB(c.r,c.g,c.b)
-            ColorPickerFrame:Show()
+            t:SetColorTexture(r,g,b,a)
+        end
+        return t
+    end
+    local function label(parent, text, font, x, y, color)
+        local t = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+        t:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+        t:SetText(text)
+        if color then t:SetTextColor(unpack(color)) end
+        return t
+    end
+    surface(f, 0.045, 0.052, 0.065, 0.99)
+    local side = CreateFrame("Frame", nil, f)
+    side:SetPoint("TOPLEFT", 0, 0); side:SetPoint("BOTTOMLEFT", 0, 0); side:SetWidth(174)
+    surface(side, 0.027, 0.031, 0.041, 0.98)
+    local brand = label(side, "NEON|cffffffffCAST|r", "GameFontNormalLarge", 20, -25)
+    local small = label(side, L.subtitle, "GameFontNormalSmall", 20, -49, {0.54,0.58,0.64})
+    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
+    local title = label(f, L.appearance, "GameFontNormalLarge", 201, -24)
+    local desc = label(f, L.description, "GameFontHighlightSmall", 201, -48, {0.57,0.61,0.66})
+    local footer = label(side, L.version, "GameFontNormalSmall", 20, -518, {0.47,0.52,0.57})
+    local pageFrames, navButtons = {}, {}
+    local selected = 1
+    local accentRegions = {brand, title}
+    local function accent()
+        local c = NeonCastDB.accent or {r=0.67,g=0.83,b=0.45}
+        for _, t in ipairs(accentRegions) do t:SetTextColor(c.r,c.g,c.b) end
+        for i, b in ipairs(navButtons) do
+            b.marker:SetColorTexture(c.r,c.g,c.b, i == selected and 1 or 0)
+            b.bg:SetColorTexture(c.r,c.g,c.b, i == selected and 0.13 or 0)
+        end
+    end
+    local function page(name, index)
+        local p = CreateFrame("Frame", nil, f)
+        p:SetPoint("TOPLEFT", f, "TOPLEFT", 194, -77)
+        p:SetSize(502, 454)
+        if index ~= 1 then p:Hide() end
+        pageFrames[index] = p
+        local b = CreateFrame("Button", nil, side)
+        b:SetSize(158, 38); b:SetPoint("TOPLEFT", side, "TOPLEFT", 8, -92 - (index-1)*46)
+        b.bg = b:CreateTexture(nil, "BACKGROUND"); b.bg:SetAllPoints()
+        b.marker = b:CreateTexture(nil, "ARTWORK"); b.marker:SetPoint("TOPLEFT", 0, -7); b.marker:SetPoint("BOTTOMLEFT", 0, 7); b.marker:SetWidth(3)
+        local t = label(b, name, "GameFontHighlight", 16, -12)
+        b:SetScript("OnClick", function()
+            selected = index
+            for i, panel in ipairs(pageFrames) do panel:SetShown(i == index) end
+            title:SetText(name); accent()
+        end)
+        navButtons[index] = b
+        return p
+    end
+    local appearance = page(L.appearance, 1)
+    local layout = page(L.layout, 2)
+    local behavior = page(L.behavior, 3)
+    local function card(parent, top, height, heading)
+        local c = CreateFrame("Frame", nil, parent)
+        c:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, top); c:SetSize(502, height)
+        surface(c, 0.078, 0.088, 0.105, 0.98)
+        local h = label(c, heading, "GameFontNormalSmall", 16, -14, {0.65,0.70,0.75})
+        local line = c:CreateTexture(nil, "BORDER")
+        line:SetPoint("TOPLEFT", 16, -35); line:SetPoint("TOPRIGHT", -16, -35); line:SetHeight(1); line:SetColorTexture(1,1,1,0.06)
+        return c
+    end
+    local function add(w) widgets[#widgets + 1] = w; return w end
+    local function slider(c, y, key, caption)
+        local lim = LIMITS[key]
+        local decimals = lim[3] < 1 and 2 or 0
+        return add(MakeSlider(c, y, caption, lim[1], lim[2], lim[3], decimals,
+            function() return CONFIG[key] end,
+            function(v)
+                ns.SetSetting(key, v)
+                if xRow and (key == "width" or key == "iconScale" or key == "cardPadding") then RefreshPosition() end
+            end))
+    end
+    local colors = card(appearance, 0, 130, L.accentTitle)
+    label(colors, L.presets, "GameFontHighlight", 16, -54)
+    local palette = {{0.67,0.83,0.45}, {0.24,0.75,0.94}, {0.72,0.48,0.96}, {1,0.40,0.40}, {1,0.72,0.28}}
+    local function choose(r,g,b)
+        NeonCastDB.accent = {r=r,g=g,b=b}
+        accent(); ns.Redraw(); RefreshAll()
+    end
+    for i, color in ipairs(palette) do
+        local b = CreateFrame("Button", nil, colors)
+        b:SetSize(24,24); b:SetPoint("TOPLEFT", colors, "TOPLEFT", 145 + (i-1)*32, -47)
+        local sw = b:CreateTexture(nil, "ARTWORK"); sw:SetAllPoints(); sw:SetColorTexture(color[1],color[2],color[3],1)
+        b:SetScript("OnClick", function() choose(color[1], color[2], color[3]) end)
+    end
+    local picker = CreateFrame("Button", nil, colors, "UIPanelButtonTemplate")
+    picker:SetSize(110,24); picker:SetPoint("TOPLEFT", colors, "TOPLEFT", 320, -47); picker:SetText(L.chooseColor)
+    picker:SetScript("OnClick", function()
+        local c = NeonCastDB.accent or {r=0.67,g=0.83,b=0.45}
+        local original = {r=c.r,g=c.g,b=c.b}
+        local function apply() local r,g,b = ColorPickerFrame:GetColorRGB(); choose(r,g,b) end
+        local function cancel() choose(original.r,original.g,original.b) end
+        if ColorPickerFrame.SetupColorPickerAndShow then
+            ColorPickerFrame:SetupColorPickerAndShow({r=c.r,g=c.g,b=c.b,swatchFunc=apply,cancelFunc=cancel})
+        else
+            ColorPickerFrame.func = apply; ColorPickerFrame.cancelFunc = cancel
+            ColorPickerFrame:SetColorRGB(c.r,c.g,c.b); ColorPickerFrame:Show()
         end
     end)
-    local presets = { {0.67,0.83,0.45}, {0.24,0.75,0.94}, {0.72,0.48,0.96} }
-    for i, color in ipairs(presets) do
-        local b = CreateFrame("Button", nil, f)
-        b:SetSize(20, 20)
-        b:SetPoint("TOPLEFT", f, "TOPLEFT", 270 + (i - 1) * 26, -577)
-        local swatch = b:CreateTexture(nil, "ARTWORK")
-        swatch:SetAllPoints()
-        swatch:SetColorTexture(color[1], color[2], color[3], 1)
-        b:SetScript("OnClick", function()
-            NeonCastDB.accent = {r=color[1], g=color[2], b=color[3]}
-            title:SetTextColor(color[1], color[2], color[3])
-            ns.Redraw()
-        end)
-    end
-    useTheme = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-    useTheme:SetSize(24,24)
-    useTheme:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -606)
-    useTheme:SetChecked(NeonCastDB.useThemeColor)
-    local useThemeText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    useThemeText:SetPoint("LEFT", useTheme, "RIGHT", 4, 0)
-    useThemeText:SetText(ns.L.useTheme)
-    useTheme:SetScript("OnClick", function(self)
-        NeonCastDB.useThemeColor = self:GetChecked() and true or false
-        NeonCastDB.accent = NeonCastDB.accent or {r=0.67,g=0.83,b=0.45}
-        ns.Redraw()
-    end)
-    -- Live X and Y while the bar is being dragged.
+    local useTheme = add(MakeCheck(colors, -86, L.useTheme,
+        function() return NeonCastDB.useThemeColor end,
+        function(on) NeonCastDB.useThemeColor = on; ns.Redraw() end))
+    local style = card(appearance, -142, 306, L.cardTitle)
+    slider(style, -43, "cardPadding", L.cardPadding)
+    slider(style, -75, "glowIntensity", L.glowIntensity)
+    slider(style, -107, "fillOpacity", L.fillOpacity)
+    slider(style, -139, "backgroundOpacity", L.backgroundOpacity)
+    add(MakeCheck(style, -177, L.showGlow, function() return CONFIG.showGlow end, function(v) ns.SetSetting("showGlow",v) end))
+    add(MakeCheck(style, -209, L.pulseGlow, function() return CONFIG.pulseGlow end, function(v) ns.SetSetting("pulseGlow",v) end))
+
+    local geometry = card(layout, 0, 448, L.geometryTitle)
+    slider(geometry, -43, "width", L.width)
+    heightRow = add(MakeSlider(geometry, -75, L.height,
+        function() return ns.Range("height") end, function() local _,hi=ns.Range("height"); return hi end, LIMITS.height[3], 0,
+        function() return CONFIG.height end, function(v) ns.SetSetting("height",v); fontRow.Refresh(); RefreshPosition() end))
+    fontRow = add(MakeSlider(geometry, -107, L.fontSize,
+        function() return ns.Range("fontSize") end, function() local _,hi=ns.Range("fontSize"); return hi end, LIMITS.fontSize[3], 0,
+        function() return CONFIG.fontSize end, function(v) ns.SetSetting("fontSize",v); heightRow.Refresh(); RefreshPosition() end))
+    slider(geometry, -139, "iconScale", L.iconScale)
+    add(MakeCheck(geometry, -175, L.icon, function() return CONFIG.showIcon end,
+        function(v) ns.SetSetting("showIcon",v); RefreshPosition() end))
+    xRow = add(MakeSlider(geometry, -218, L.x,
+        function() return PositionLimits() end, function() local _,x=PositionLimits(); return x end, 1, 0,
+        function() local x=ns.GetPosition(); return x end, function(v) local _,y=ns.GetPosition(); ns.SetPosition(v,y) end))
+    yRow = add(MakeSlider(geometry, -250, L.y,
+        function() local _,_,y=PositionLimits(); return y end, function() local _,_,_,y=PositionLimits(); return y end, 1, 0,
+        function() local _,y=ns.GetPosition(); return y end, function(v) local x=ns.GetPosition(); ns.SetPosition(x,v) end))
+    label(geometry, L.about, "GameFontHighlightSmall", 16, -300, {0.60,0.65,0.70})
+
+    local casting = card(behavior, 0, 448, L.behaviorTitle)
+    slider(casting, -43, "fadeTime", L.fade)
+    slider(casting, -75, "tickWidth", L.tickWidth)
+    add(MakeCheck(casting, -108, L.latency, function() return CONFIG.showLatency end, function(v) ns.SetSetting("showLatency",v) end))
+    add(MakeCheck(casting, -140, L.queue, function() return CONFIG.showQueue end,
+        function(v) ns.SetSetting("showQueue",v); queueRow.SetEnabled(v) end))
+    queueRow = add(MakeSlider(casting, -175, L.queueWindow, 0, 400, 10, 0,
+        function() return ns.GetQueueMs() end, function(v) ns.SetQueueMs(v); ns.Redraw(); queueRow.Display(ns.GetQueueMs()) end))
+    add(MakeColorRow(casting, -215, L.queueColor, "queueColor"))
+    add(MakeColorRow(casting, -245, L.latencyColor, "latencyColor"))
+    add(MakeColorRow(casting, -275, L.tickColor, "tickColor"))
+
+    local reset = CreateFrame("Button", nil, side, "UIPanelButtonTemplate")
+    reset:SetSize(138, 26); reset:SetPoint("BOTTOM", side, "BOTTOM", 0, 45); reset:SetText(L.reset)
+    resetButton = reset
+    reset:SetScript("OnClick", function() ns.RestoreDefaults(); accent(); RefreshAll() end)
+    AddTooltip(reset, {reset}, L.reset, L.resetHint)
     f:SetScript("OnUpdate", function()
         local b = ns.GetBar()
-        if b and b.dragging then
-            local x, y = ns.GetDragPixelPos(b)
-            xRow.Display(x)
-            yRow.Display(y)
-        end
+        if b and b.dragging then local x,y = ns.GetDragPixelPos(b); xRow.Display(x); yRow.Display(y) end
     end)
-
     f:SetScript("OnShow", function(self)
-        self:ClearAllPoints()
-        self:SetPoint("CENTER", UIParent, "CENTER", 0, 0) -- opens centered, but can be dragged away
-        ns.SetUnlocked(true)
-        local c = NeonCastDB.accent or {r=0.67,g=0.83,b=0.45}
-        title:SetTextColor(c.r,c.g,c.b)
-        useTheme:SetChecked(NeonCastDB.useThemeColor)
-        RefreshAll()
+        self:ClearAllPoints(); self:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        ns.SetUnlocked(true); accent(); RefreshAll()
     end)
-    f:SetScript("OnHide", function()
-        ns.SetUnlocked(false)
-    end)
-
-    tinsert(UISpecialFrames, "NeonCastOptions") -- Escape closes it
-
+    f:SetScript("OnHide", function() ns.SetUnlocked(false) end)
+    tinsert(UISpecialFrames, "NeonCastOptions")
+    accent()
     return f
 end
 
