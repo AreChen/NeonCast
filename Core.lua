@@ -762,8 +762,7 @@ end
 
 local function UpdateValue(bar, now)
     if bar.latencyText and CONFIG.showLatencyText then
-        local display = bar.castLatency and string.format("%d ms", math.floor(bar.castLatency * 1000 + 0.5)) or "-- ms"
-        if display ~= bar.latencyDisplay then bar.latencyText:SetText(display); bar.latencyDisplay = display end
+        ns.CastLatency.UpdateText(bar, bar.castLatency)
     end
     local elapsed = now - bar.startTime
     if elapsed < 0 then elapsed = 0 end
@@ -1409,6 +1408,7 @@ local function CreateBar(unit)
     ApplyFont(bar)
     SnapBar(bar, unit) -- again now that the text exists, so its real height is used
     bar:SetScript("OnUpdate", OnUpdate)
+    bar:SetScript("OnHide", function(hiddenBar) ns.CastLatency.ClearText(hiddenBar) end)
     bar:Hide()
     return bar
 end

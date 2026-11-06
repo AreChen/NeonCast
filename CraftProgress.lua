@@ -65,10 +65,23 @@ function M.Start(guid, now)
     local sent = pending[guid]
     pending[guid] = nil
     if not sent or now < sent or now - sent > MAX_AGE then return nil end
-    local elapsed = now - sent
-    -- A same-frame or sub-millisecond event pair does not reliably measure network latency.
-    if elapsed < 0.001 then return nil end
-    return elapsed
+    return now - sent
+end
+
+-- A missing sample leaves the visible value unchanged until the bar is hidden.
+function M.UpdateText(bar, latency)
+    if latency == nil or not bar.latencyText then return end
+    local display = string.format("%d ms", math.floor(latency * 1000))
+    if display ~= bar.latencyDisplay then
+        bar.latencyText:SetText(display)
+        bar.latencyDisplay = display
+    end
+end
+
+function M.ClearText(bar)
+    if bar.latencyText then bar.latencyText:SetText("") end
+    bar.latencyDisplay = nil
+    bar.castLatency = nil
 end
 
 function M.Forget(guid)

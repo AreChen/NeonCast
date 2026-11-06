@@ -26,7 +26,7 @@ def test_cast_latency_matches_guid_and_clears_stale_events():
     p.Sent(None, 21)
     assert p.Start(None, 21.1) is None
 
-def test_clock_prefers_precise_and_sub_millisecond_is_unavailable():
+def test_clock_prefers_precise_and_reports_sub_millisecond():
     lua = LuaRuntime(unpack_returned_tuples=True)
     ns = lua.table()
     lua.execute('function GetTime() return 10 end; function GetTimePreciseSec() return 10.123456 end')
@@ -35,10 +35,10 @@ def test_clock_prefers_precise_and_sub_millisecond_is_unavailable():
     assert p.Now() == 10.123456
     p.CastChanged(10)
     p.Sent('same', 10)
-    assert p.Start('same', 10) is None
+    assert p.Start('same', 10) == 0
     p.CastChanged(10)
     p.Sent('under', 10)
-    assert p.Start('under', 10.0002) is None
+    assert abs(p.Start('under', 10.0002) - 0.0002) < 0.000001
     p.CastChanged(10)
     p.Sent('normal', 10)
     assert abs(p.Start('normal', 10.012) - .012) < .00001
@@ -58,3 +58,21 @@ def test_cast_latency_uses_cast_change_before_sent_and_consumes_it():
     p.CastChanged(12)
     p.Sent('stale', 30)
     assert p.Start('stale', 30.05) is None
+
+
+def test_latency_display_keeps_existing_text_when_measurement_missing():
+    lua = LuaRuntime(unpack_returned_tuples=True)
+    ns = lua.table()
+    lua.execute((ROOT / 'CraftProgress.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
+    p = ns.CastLatency
+    bar = lua.eval('{ latencyText = { SetText = function(self, value) self.value = value end } }')
+    p.UpdateText(bar, 0.0008)
+    assert bar.latencyText.value == '0 ms'
+    p.UpdateText(bar, 0.0529)
+    assert bar.latencyText.value == '52 ms'
+    p.UpdateText(bar, None)
+    assert bar.latencyText.value == '52 ms'
+    p.ClearText(bar)
+    assert bar.latencyText.value == ''
+    p.UpdateText(bar, None)
+    assert bar.latencyText.value == ''

@@ -55,9 +55,9 @@ extra.cn.defaultFont = "跟随游戏字体"
 extra.en.fontPath = "Or enter an in-game font path, then press Enter"
 extra.tw.fontPath = "或輸入遊戲內字體路徑，按 Enter 套用"
 extra.cn.fontPath = "或输入游戏内字体路径，按 Enter 应用"
-extra.en.latencyHint = "Estimated time from cast change to start event (ms); -- means unavailable or under 1 ms."
-extra.tw.latencyHint = "施法變更到開始事件的估計耗時，單位為毫秒；-- 代表無法測量。"
-extra.cn.latencyHint = "施法变更到开始事件的估计耗时，单位为毫秒；-- 表示无法测量。"
+extra.en.latencyHint = "Estimated time from cast change to start event (ms). No new value is shown when timing is unavailable."
+extra.tw.latencyHint = "施法變更到開始事件的估計耗時，單位為毫秒；無法測量時不更新數值。"
+extra.cn.latencyHint = "施法变更到开始事件的估计耗时，单位为毫秒；无法测量时不更新数值。"
 local locale = GetLocale and GetLocale() or "enUS"
 ns.L = locale == "zhTW" and tw or locale == "zhCN" and cn or en
 
