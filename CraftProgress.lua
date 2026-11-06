@@ -27,6 +27,7 @@ end
 do
 local _, ns = ...
 local pending = {}
+local lastCastChange
 local MAX_AGE = 15
 local M = {}
 ns.CastLatency = M
@@ -42,12 +43,21 @@ local function valid(value)
     return type(value) == "string" and value ~= ""
 end
 
+function M.CastChanged(now)
+    if type(now) == "number" then lastCastChange = now end
+end
+
 function M.Sent(guid, now)
+    local changed = lastCastChange
+    lastCastChange = nil
     if not valid(guid) or type(now) ~= "number" then return end
     for id, when in pairs(pending) do
         if now - when > MAX_AGE or now < when then pending[id] = nil end
     end
-    pending[guid] = now
+    pending[guid] = nil
+    if changed and changed <= now and now - changed <= MAX_AGE then
+        pending[guid] = changed
+    end
 end
 
 function M.Start(guid, now)

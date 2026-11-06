@@ -1633,6 +1633,7 @@ local CAST_EVENTS = {
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
 
 -- Where the combat log is still open to addons (Classic Era), learn the
 -- school of your own casts by spell name. Spell IDs are 0 there, names work.
@@ -1727,6 +1728,8 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         end
         place()
         if C_Timer and C_Timer.After then C_Timer.After(0, place) end -- the size can settle a frame after the event
+    elseif event == "CURRENT_SPELL_CAST_CHANGED" then
+        ns.CastLatency.CastChanged(ns.CastLatency.Now())
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
         OnCombatLog()
     elseif event == "UNIT_SPELLCAST_SENT" then
