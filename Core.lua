@@ -1153,8 +1153,8 @@ local function CreateBorder(bar)
         local left = iconOn and bar.icon or bar
         for _, texture in ipairs({bar.neonBack, bar.neonRing}) do
             texture:ClearAllPoints()
-            texture:SetPoint("TOPLEFT", left, "TOPLEFT", iconOn and -14 or -8, iconOn and 8 or 5)
-            texture:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 6, -5)
+            texture:SetPoint("TOPLEFT", left, "TOPLEFT", iconOn and -14 or -10, 9)
+            texture:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 10, -9)
         end
         bar.neonGlow:ClearAllPoints()
         bar.neonGlow:SetPoint("TOPLEFT", bar.neonBack, "TOPLEFT", -12, 12)
@@ -1257,7 +1257,7 @@ local function CreateBar(unit)
     -- reveals more or less of them as the cast progresses.
     bar.fill = CreateFrame("Frame", nil, bar)
     bar.fill:SetClipsChildren(true)
-    if bar.neonRing then bar.fill:SetAlpha(0.28) end
+    if bar.neonRing then bar.fill:SetAlpha(0.22) end
     bar.fill:SetPoint("TOPLEFT", bar, "TOPLEFT")
     bar.fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT")
     bar.fill:SetWidth(0.01)
