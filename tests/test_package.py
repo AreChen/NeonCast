@@ -15,3 +15,9 @@ def test_manifest_files_exist():
     for item in manifest:
         if item and not item.startswith('#'):
             assert (ROOT / item).is_file(), item
+def test_neon_card_assets_are_packaged():
+    core = (ROOT / 'Core.lua').read_text(encoding='utf-8-sig')
+    assert 'NeonRing' in core and 'NeonGlow' in core
+    assert (ROOT / 'Media' / 'NeonBack.tga').is_file()
+    assert (ROOT / 'Media' / 'NeonRing.tga').is_file()
+    assert (ROOT / 'Media' / 'NeonGlow.tga').is_file()

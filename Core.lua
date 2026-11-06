@@ -537,7 +537,17 @@ local function SchoolFromDescription(id)
     return nil
 end
 
+-- Theme color applies to the card independently of spell-school fill colors.
+local function PaintNeon(bar)
+    if not bar.neonRing then return end
+    local c = NeonCastDB and NeonCastDB.accent or {r=0.67, g=0.83, b=0.45}
+    bar.neonRing:SetVertexColor(c.r, c.g, c.b, 0.65)
+    bar.neonGlow:SetVertexColor(c.r, c.g, c.b, 0.95)
+    bar.neonStripe:SetColorTexture(c.r, c.g, c.b, 1)
+end
+
 ApplyColor = function(bar)
+    PaintNeon(bar)
     if NeonCastDB and NeonCastDB.useThemeColor and NeonCastDB.accent then
         local c = NeonCastDB.accent
         SetGradientStops(bar, { { c.r, c.g, c.b } })
@@ -1138,6 +1148,24 @@ local function CreateBorder(bar)
         bar.icon:SetPoint("TOPRIGHT", bar, "TOPLEFT", -b, 0)
     end
 
+    if bar.neonRing then
+        -- The dark card wraps both icon and progress instead of separating them.
+        local left = iconOn and bar.icon or bar
+        for _, texture in ipairs({bar.neonBack, bar.neonRing}) do
+            texture:ClearAllPoints()
+            texture:SetPoint("TOPLEFT", left, "TOPLEFT", iconOn and -14 or -8, iconOn and 8 or 5)
+            texture:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 6, -5)
+        end
+        bar.neonGlow:ClearAllPoints()
+        bar.neonGlow:SetPoint("TOPLEFT", bar.neonBack, "TOPLEFT", -12, 12)
+        bar.neonGlow:SetPoint("BOTTOMRIGHT", bar.neonBack, "BOTTOMRIGHT", 12, -12)
+        bar.neonStripe:ClearAllPoints()
+        bar.neonStripe:SetPoint("TOPLEFT", bar.neonBack, "TOPLEFT", 5, -6)
+        bar.neonStripe:SetPoint("BOTTOMLEFT", bar.neonBack, "BOTTOMLEFT", 5, 6)
+        PaintNeon(bar)
+        return
+    end
+
     if not bar.border then
         bar.border = {}
         for i = 1, 5 do
@@ -1187,15 +1215,49 @@ local function CreateBar(unit)
     SnapBar(bar, unit)
     bar.px = PixelSize(bar)
 
+    -- Independently drawn nine-slice textures; no HunterSuite assets are required.
+    local ring = bar:CreateTexture(nil, "BACKGROUND", nil, -5)
+    if ring.SetTextureSliceMargins then
+        bar.neonBack = bar:CreateTexture(nil, "BACKGROUND", nil, -8)
+        bar.neonBack:SetTexture("Interface\\AddOns\\NeonCast\\Media\\NeonBack")
+        bar.neonBack:SetTextureSliceMargins(16, 16, 16, 16)
+        bar.neonBack:SetVertexColor(0.025, 0.03, 0.04, 0.96)
+        bar.neonGlow = bar:CreateTexture(nil, "BACKGROUND", nil, -7)
+        bar.neonGlow:SetTexture("Interface\\AddOns\\NeonCast\\Media\\NeonGlow")
+        bar.neonGlow:SetTextureSliceMargins(24, 24, 24, 24)
+        bar.neonGlow:SetBlendMode("ADD")
+        bar.neonRing = ring
+        ring:SetTexture("Interface\\AddOns\\NeonCast\\Media\\NeonRing")
+        ring:SetTextureSliceMargins(16, 16, 16, 16)
+        if ring.SetTextureSliceMode and Enum and Enum.UITextureSliceMode then
+            bar.neonBack:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+            ring:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+            bar.neonGlow:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        end
+        bar.neonStripe = bar:CreateTexture(nil, "ARTWORK", nil, 2)
+        bar.neonStripe:SetWidth(3)
+        local animation = bar.neonGlow:CreateAnimationGroup()
+        animation:SetLooping("BOUNCE")
+        local pulse = animation:CreateAnimation("Alpha")
+        pulse:SetFromAlpha(0.45)
+        pulse:SetToAlpha(1)
+        pulse:SetDuration(0.8)
+        pulse:SetSmoothing("IN_OUT")
+        animation:Play()
+    else
+        ring:Hide()
+    end
+
     bar.bg = bar:CreateTexture(nil, "BACKGROUND")
     bar.bg:SetAllPoints()
-    bar.bg:SetColorTexture(0, 0, 0, 0.6)
+    bar.bg:SetColorTexture(0, 0, 0, 0.35)
     CreateBorder(bar)
 
     -- The fill is a frame that clips its gradient segments, so the bar only
     -- reveals more or less of them as the cast progresses.
     bar.fill = CreateFrame("Frame", nil, bar)
     bar.fill:SetClipsChildren(true)
+    if bar.neonRing then bar.fill:SetAlpha(0.28) end
     bar.fill:SetPoint("TOPLEFT", bar, "TOPLEFT")
     bar.fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT")
     bar.fill:SetWidth(0.01)
@@ -1300,6 +1362,7 @@ local function ShowDemo(bar)
     bar.startTime = GetTime() - bar.total * 0.72 -- 72% filled, so it does not land on a tick
     bar.endTime = bar.startTime + bar.total
     bar.lastStr = nil
+    PaintNeon(bar)
     SetName(bar, "NeonCast - drag to move")
     if NeonCastDB and NeonCastDB.useThemeColor and NeonCastDB.accent then
         local c = NeonCastDB.accent
