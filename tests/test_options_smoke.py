@@ -40,6 +40,7 @@ def test_options_open_navigate_and_close_with_mock_ui():
         local bar=CreateFrame('Bar'); bar.px=1
         ns={L=L,CONFIG=cfg,LIMITS=limits,PALETTE={},COLOR_ALPHA={},GetBar=function() return bar end,
             IsDefault=function() return true end,GetQueueMs=function() return 400 end,
+            GetPartColor=function() return 1,0,0,0.4 end,
             GetPosition=function() return 0,0 end, GetBarShift=function() return 0 end,
             Range=function() return 1,100 end,SetUnlocked=noop,SetSetting=noop,SetPosition=noop,
             Redraw=noop,RestoreDefaults=noop,ColorUsable=function() return true end}

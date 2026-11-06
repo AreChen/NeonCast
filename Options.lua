@@ -196,72 +196,47 @@ end
 -- picked.
 local function MakeColorRow(parent, y, text, part, tip)
     local row = CreateFrame("Frame", nil, parent)
-    row:SetSize(FRAME_W, 20)
+    row:SetSize(FRAME_W, 26)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
-    row:EnableMouse(true)
-    row:RegisterForDrag("LeftButton")
-    row:SetScript("OnDragStart", function() if frame then frame:StartMoving() end end)
-    row:SetScript("OnDragStop", function() if frame then frame:StopMovingOrSizing() end end)
-
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     label:SetPoint("LEFT", row, "LEFT", 16, 0)
-    label:SetWidth(130)
-    label:SetJustifyH("LEFT")
-    label:SetText(text)
+    label:SetWidth(130); label:SetJustifyH("LEFT"); label:SetText(text)
 
-    local swatches = {}
-    local x = 150
-    for _, e in ipairs(ns.PALETTE) do
-        if not e.only or e.only[part] then
-            local b = CreateFrame("Button", nil, row)
-            b:SetSize(16, 16)
-            b:SetPoint("LEFT", row, "LEFT", x, 0)
-            x = x + 20
-            b.edge = b:CreateTexture(nil, "BACKGROUND")
-            b.edge:SetAllPoints()
-            local back = b:CreateTexture(nil, "BORDER")
-            back:SetPoint("TOPLEFT", 2, -2)
-            back:SetPoint("BOTTOMRIGHT", -2, 2)
-            back:SetColorTexture(0, 0, 0, 0.6) -- the bar's background
-            local fill = b:CreateTexture(nil, "ARTWORK")
-            fill:SetPoint("TOPLEFT", 2, -2)
-            fill:SetPoint("BOTTOMRIGHT", -2, 2)
-            fill:SetColorTexture(e[1], e[2], e[3], ns.COLOR_ALPHA[part])
-            b.key = e.key
-            b:SetScript("OnClick", function()
-                if ns.ColorUsable(part, e.key) then
-                    ns.SetSetting(part, e.key)
-                    RefreshColors()
-                    UpdateReset()
-                end
-            end)
-            b:SetScript("OnEnter", function()
-                GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
-                GameTooltip:AddLine(e.name, 1, 1, 1)
-                local by, similar = ns.ColorTakenBy(part, e.key)
-                if by then
-                    local why = similar and "Too close to the color of " or "Already used by "
-                    GameTooltip:AddLine(why .. PART_NAMES[by] .. ".", 1, 0.3, 0.3, true)
-                end
-                GameTooltip:Show()
-            end)
-            b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            swatches[#swatches + 1] = b
+    local preview = CreateFrame("Button", nil, row)
+    preview:SetSize(24, 24); preview:SetPoint("LEFT", row, "LEFT", 150, 0)
+    local border = preview:CreateTexture(nil, "BACKGROUND")
+    border:SetAllPoints(); border:SetColorTexture(0.55, 0.58, 0.62, 1)
+    local swatch = preview:CreateTexture(nil, "ARTWORK")
+    swatch:SetPoint("TOPLEFT", 2, -2); swatch:SetPoint("BOTTOMRIGHT", -2, 2)
+    local picker = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    picker:SetSize(110, 24); picker:SetPoint("LEFT", preview, "RIGHT", 12, 0); picker:SetText(ns.L.chooseColor)
+
+    local function openPicker()
+        local r, g, b = ns.GetPartColor(part)
+        local original = CONFIG[part]
+        local function apply()
+            local red, green, blue = ColorPickerFrame:GetColorRGB()
+            ns.SetSetting(part, {r=red, g=green, b=blue})
+            row.Refresh(); UpdateReset()
+        end
+        local function cancel()
+            ns.SetSetting(part, original)
+            row.Refresh(); UpdateReset()
+        end
+        if ColorPickerFrame.SetupColorPickerAndShow then
+            ColorPickerFrame:SetupColorPickerAndShow({r=r, g=g, b=b, swatchFunc=apply, cancelFunc=cancel})
+        else
+            ColorPickerFrame.func = apply; ColorPickerFrame.cancelFunc = cancel
+            ColorPickerFrame:SetColorRGB(r,g,b); ColorPickerFrame:Show()
         end
     end
-
+    preview:SetScript("OnClick", openPicker)
+    picker:SetScript("OnClick", openPicker)
     function row.Refresh()
-        for _, b in ipairs(swatches) do
-            if CONFIG[part] == b.key then
-                b.edge:SetColorTexture(1, 0.82, 0, 1)
-            else
-                b.edge:SetColorTexture(0.35, 0.38, 0.5, 1)
-            end
-            b:SetAlpha(ns.ColorTakenBy(part, b.key) and 0.25 or 1)
-        end
+        local r, g, b = ns.GetPartColor(part)
+        swatch:SetColorTexture(r,g,b,1)
     end
-
-    if tip then AddTooltip(row, { row }, text, tip) end
+    if tip then AddTooltip(row, {row}, text, tip) end
     colorRows[#colorRows + 1] = row
     return row
 end

@@ -86,7 +86,11 @@ for _, key in ipairs(COLOR_PARTS) do DEFAULTS[key] = CONFIG[key] end
 
 -- r, g, b, a of a part's current color.
 local function PartColor(part)
-    local e = PALETTE_BY_KEY[CONFIG[part]] or PALETTE_BY_KEY[DEFAULTS[part]]
+    local selected = CONFIG[part]
+    if type(selected) == "table" then
+        return selected.r, selected.g, selected.b, COLOR_ALPHA[part]
+    end
+    local e = PALETTE_BY_KEY[selected] or PALETTE_BY_KEY[DEFAULTS[part]]
     return e[1], e[2], e[3], COLOR_ALPHA[part]
 end
 
@@ -110,6 +114,13 @@ end
 
 -- True when `part` may use palette entry `key`: it exists, is offered for that part, and no other part has it.
 local function ColorUsable(part, key)
+    if type(key) == "table" then
+        for _, channel in ipairs({"r", "g", "b"}) do
+            local value = key[channel]
+            if type(value) ~= "number" or value ~= value or value < 0 or value > 1 then return false end
+        end
+        return COLOR_ALPHA[part] ~= nil
+    end
     local e = PALETTE_BY_KEY[key]
     if not e or (e.only and not e.only[part]) then return false end
     return not ColorTakenBy(part, key)
@@ -1469,7 +1480,7 @@ ns.CONFIG, ns.LIMITS, ns.DEFAULTS = CONFIG, LIMITS, DEFAULTS
 ns.GetQueueMs, ns.SetQueueMs = GetQueueMs, SetQueueMs
 ns.Range = Range
 ns.PALETTE, ns.COLOR_PARTS, ns.COLOR_ALPHA = PALETTE, COLOR_PARTS, COLOR_ALPHA
-ns.ColorTakenBy, ns.ColorUsable = ColorTakenBy, ColorUsable
+ns.ColorTakenBy, ns.ColorUsable, ns.GetPartColor = ColorTakenBy, ColorUsable, PartColor
 
 function ns.GetBar()
     return bars.player
