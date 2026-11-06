@@ -31,6 +31,12 @@ local MAX_AGE = 15
 local M = {}
 ns.CastLatency = M
 
+-- GetTime may be constant for an entire rendered frame.
+function M.Now()
+    if type(GetTimePreciseSec) == "function" then return GetTimePreciseSec() end
+    return GetTime()
+end
+
 local function valid(value)
     if issecretvalue and issecretvalue(value) then return false end
     return type(value) == "string" and value ~= ""
@@ -49,7 +55,10 @@ function M.Start(guid, now)
     local sent = pending[guid]
     pending[guid] = nil
     if not sent or now < sent or now - sent > MAX_AGE then return nil end
-    return now - sent
+    local elapsed = now - sent
+    -- A same-frame or sub-millisecond event pair does not reliably measure network latency.
+    if elapsed < 0.001 then return nil end
+    return elapsed
 end
 
 function M.Forget(guid)

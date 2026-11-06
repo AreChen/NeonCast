@@ -1731,11 +1731,11 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         OnCombatLog()
     elseif event == "UNIT_SPELLCAST_SENT" then
         local _, sentGUID, spellID = ... -- target, castGUID, spellID
-        if unit == "player" then ns.CastLatency.Sent(sentGUID, GetTime()) end
+        if unit == "player" then ns.CastLatency.Sent(sentGUID, ns.CastLatency.Now()) end
         OnSent(bars[unit], sentGUID, spellID)
     elseif (event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START") and unit == "player" then
         local bar = bars[unit]
-        local measured = ns.CastLatency.Start(castGUID, GetTime())
+        local measured = ns.CastLatency.Start(castGUID, ns.CastLatency.Now())
         if bar then bar.castLatency = measured; Refresh(bar, event, castGUID) end
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         if unit == "player" then ns.CastLatency.Forget(castGUID) end
