@@ -1,17 +1,24 @@
 # NeonCast
 
-NeonCast 是為《魔獸世界》永恆服製作的玩家施法條插件，以 Kefer 的 ChromaCast 為基礎，保留其 MIT 授權（見 LICENSE）。
+**English** | [繁體中文](README.zh-TW.md)
 
-## 安裝與使用
+NeonCast is a player cast bar addon for World of Warcraft Forever. It is based on Kefer's ChromaCast and retains its MIT license (see [LICENSE](LICENSE)).
 
-把插件檔案放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 以免施法條重複。輸入 `/neoncast` 或 `/nc` 開啟設置，拖曳施法條即可調整位置。設置與位置依角色保存。
+## Installation and usage
 
-設置窗口提供外觀、尺寸與位置、施法行為、延遲文字四個頁面。可調整卡片內距、背景與進度透明度、光暈強度及呼吸效果、圖標大小、字體、位置、法術佇列與延遲顯示。主題、佇列區域、延遲區域和刻度均可使用色盤選色並即時預覽；設置依角色保存。介面根據客戶端語言提供繁體中文、簡體中文和英文，部分提示文字暫為英文。
+Extract the `NeonCast` folder into `Interface/AddOns/NeonCast`. Disable ChromaCast to avoid overlapping cast bars. Type `/neoncast` or `/nc` to open settings, and drag the cast bar to reposition it. Settings and positions are saved per character.
 
-批量製作計數監聽 `C_TradeSkillUI.CraftRecipe`，只有當客戶端提供有效數量，且配方 ID 與施法 ID 一致時才顯示進度，不會猜測未知數量。永恆服的實際 API 行為仍需在遊戲中驗證。
+## Features
 
-互動法術 `Opening - No Text` 顯示為「開啟中」。可在「延遲文字」頁面開關施法變更事件到施法開始的估計耗時數值（無法配對時不更新數值，施法條隱藏後清除），調整大小、顏色，選擇 LibSharedMedia 共享字體或填寫遊戲內字體檔案路徑。
+- A HunterSuite-inspired cast bar and settings window with glow, a customizable theme, and color pickers.
+- Controls for spacing, opacity, icon size, fonts, positioning, spell queue, latency indicators, and tick marks.
+- Crafting batch progress when the client provides a valid quantity and the recipe ID matches the spell ID.
+- A localized label for the `Opening - No Text` interaction spell.
+- Optional, customizable latency text based on the estimated time from the cast-change event to cast start. When a measurement is unavailable, the displayed value is not updated; it is cleared when the bar hides. A displayed `0 ms` does not mean zero network latency.
+- English, Traditional Chinese, and Simplified Chinese interface text, with some help text still in English.
 
-## 測試
+The addon targets the Forever client. Actual event availability can vary by action, including quest items.
 
-使用 Python 安裝 `lupa` 與 `pytest`，然後執行 `python -m pytest tests`。這些測試不代替遊戲內測試。
+## Testing
+
+Install `lupa` and `pytest` for Python and run `python -m pytest tests`. Automated tests do not replace in-game testing.
