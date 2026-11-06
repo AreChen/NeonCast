@@ -24,9 +24,9 @@ local CONFIG = {
     showLatencyText = true, latencyFontSize = 11, latencyTextColor = "white",
     showIcon = true, -- spell icon to the left of the bar, sharing the bar's left border
     showQueue = true, -- draw the spell queue window zone at the end of the cast
-    showLatency = true, -- draw the world latency zone at the end of the cast
+    showLatency = true, -- draw the measured cast latency zone
     queueColor   = "red", -- spell queue window zone
-    latencyColor = "white", -- world latency zone
+    latencyColor = "white", -- measured cast latency zone
     fadeTime  = 1, -- seconds the bar takes to fade out after a cast ends (0 = no fade)
     failColor = { 1, 0.1, 0.1 }, -- the bar's color when a cast is interrupted or fails
     stretchMaxColors = 6, -- spells with more colors than this (e.g. a 7-school Chaos) use a fixed gradient instead of stretching
@@ -722,7 +722,7 @@ local function SetSafeZone(bar)
         return math.floor(bar:GetWidth() * win / bar.total / px + 0.5) * px
     end
     bar.queuePx = (CONFIG.showQueue and not bar.channel) and pixels(GetQueueWindow()) or 0
-    bar.latencyPx = CONFIG.showLatency and pixels(GetLatency()) or 0
+    bar.latencyPx = CONFIG.showLatency and bar.castLatency and pixels(bar.castLatency) or 0
 
     bar.tickXs = nil
     local count = bar.channel and bar.tickCount or 0
@@ -757,14 +757,13 @@ local function ApplyLatencyStyle(bar)
     bar.latencyText:ClearAllPoints()
     bar.latencyText:SetPoint("LEFT", bar, "RIGHT", (bar.neonRing and CONFIG.cardPadding or 2) + 8, 0)
     bar.latencyText:SetShown(CONFIG.showLatencyText)
-    bar.lastLatencyUpdate = nil
+    bar.latencyDisplay = nil
 end
 
 local function UpdateValue(bar, now)
-    if bar.latencyText and CONFIG.showLatencyText and (not bar.lastLatencyUpdate or now - bar.lastLatencyUpdate >= 1) then
-        local latency = GetLatency()
-        if Plain(latency) then bar.latencyText:SetText(string.format("%d ms", math.floor(latency * 1000 + 0.5))) end
-        bar.lastLatencyUpdate = now
+    if bar.latencyText and CONFIG.showLatencyText then
+        local display = bar.castLatency and string.format("%d ms", math.floor(bar.castLatency * 1000 + 0.5)) or "-- ms"
+        if display ~= bar.latencyDisplay then bar.latencyText:SetText(display); bar.latencyDisplay = display end
     end
     local elapsed = now - bar.startTime
     if elapsed < 0 then elapsed = 0 end
@@ -1019,6 +1018,7 @@ end
 
 -- Draws a cast the game does not report (see HIDDEN_CASTS in ChromaData.lua), starting now.
 local function ShowHiddenCast(bar, name, spellID, duration, castGUID)
+    bar.castLatency = nil -- This synthetic cast has no matching start event.
     bar.active = true
     bar.fading = false
     bar.failed = nil
@@ -1419,6 +1419,7 @@ end
 -- A frozen, half-filled bar to preview settings and to grab while the bar is unlocked.
 local function ShowDemo(bar)
     bar.active, bar.fading, bar.failed = false, false, nil
+    bar.castLatency = nil
     bar:SetAlpha(1)
     bar.spellID, bar.spellName, bar.channel, bar.castID = nil, nil, false, nil
     bar.total = 3
@@ -1730,16 +1731,22 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         OnCombatLog()
     elseif event == "UNIT_SPELLCAST_SENT" then
         local _, sentGUID, spellID = ... -- target, castGUID, spellID
+        if unit == "player" then ns.CastLatency.Sent(sentGUID, GetTime()) end
         OnSent(bars[unit], sentGUID, spellID)
+    elseif (event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START") and unit == "player" then
+        local bar = bars[unit]
+        local measured = ns.CastLatency.Start(castGUID, GetTime())
+        if bar then bar.castLatency = measured; Refresh(bar, event, castGUID) end
     elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+        if unit == "player" then ns.CastLatency.Forget(castGUID) end
         local _, spellID = ...
         OnSucceeded(bars[unit], castGUID)
         if unit == "player" and not (issecretvalue and issecretvalue(spellID)) then ns.CraftProgress.Succeeded(spellID) end
     elseif event == "UNIT_SPELLCAST_FAILED_QUIET" then
-        if unit == "player" then ns.CraftProgress.Reset() end
+        if unit == "player" then ns.CraftProgress.Reset(); ns.CastLatency.Forget(castGUID) end
         OnHiddenStopped(bars[unit], event, castGUID)
     elseif bars[unit] then
-        if unit == "player" and (event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET") then ns.CraftProgress.Reset() end
+        if unit == "player" and (event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET") then ns.CraftProgress.Reset(); ns.CastLatency.Forget(castGUID) end
         if (event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED")
             and OnHiddenStopped(bars[unit], event, castGUID) then
             return
