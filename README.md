@@ -6,7 +6,7 @@ NeonCast is a personal cast bar for World of Warcraft Forever, based on Kefer's 
 
 ## Installation and use
 
-Place the `NeonCast` folder in `Interface/AddOns/NeonCast` and disable ChromaCast to avoid overlapping bars. Open settings with `/nc`, `/neoncast`, or the minimap button. Settings are saved per character.
+Download **NeonCast-<version>.zip** from [GitHub Releases](https://github.com/AreChen/NeonCast/releases), extract it, and place the `NeonCast` folder in `Interface/AddOns/NeonCast` and disable ChromaCast to avoid overlapping bars. Open settings with `/nc`, `/neoncast`, or the minimap button. Settings are saved per character.
 
 Opening settings keeps live casts visible. Enable **Preview / move bar** to show a demo and drag the bar; closing settings or entering combat ends preview. X/Y controls can also move the bar without dragging. The settings panel scales to the available screen size.
 
@@ -34,6 +34,8 @@ python -m pytest tests -q
 python tools/package.py
 ```
 
-The tests load the actual TOC sequence with a strict simulated UI, verify migrations and cast-event flows, and compile all Lua files using Lua 5.1. Panel lifecycle tests also run on Lua 5.5. GitHub Actions runs the suite on pushes and pull requests. The package command produces `dist/NeonCast.zip` with the addon folder at its root.
+The tests load the actual TOC sequence with a strict simulated UI, verify migrations and cast-event flows, and compile all Lua files using Lua 5.1. Panel lifecycle tests also run on Lua 5.5. GitHub Actions runs the suite on pushes and pull requests. The package command produces `dist/NeonCast-<version>.zip` and a separate SHA-256 checksum. The ZIP contains runtime files, required artwork and the license only. GitHub’s automatic Source code archives are for developers.
 
 See [module and translation guide](docs/DEVELOPMENT.md) for module boundaries and adding a language.
+
+Development continues directly on `main`. Matching `v<version>` tags trigger tested, versioned GitHub Releases. See the [release guide](docs/RELEASING.md).

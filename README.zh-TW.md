@@ -6,7 +6,7 @@ NeonCast 是《魔獸世界》永恆服的個人施法條插件，基於 Kefer �
 
 ## 安裝與使用
 
-將 `NeonCast` 資料夾放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 以免重複顯示。輸入 `/nc`、`/neoncast` 或點擊小地圖按鈕開啟設定，配置依角色儲存。
+從 [GitHub Releases](https://github.com/AreChen/NeonCast/releases) 下載 **NeonCast-<版本>.zip**，解壓縮後將 `NeonCast` 資料夾放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 以免重複顯示。輸入 `/nc`、`/neoncast` 或點擊小地圖按鈕開啟設定，配置依角色儲存。
 
 開啟設定時仍顯示真實施法；啟用「預覽／移動施法條」後才顯示示範並允許拖曳。關閉設定或進入戰鬥會結束預覽。亦可使用 X/Y 控制項調整位置，設定視窗會依畫面空間縮放。
 
@@ -28,4 +28,6 @@ NeonCast 是《魔獸世界》永恆服的個人施法條插件，基於 Kefer �
 
 安裝 `requirements-dev.txt` 的依賴後執行 `python -m pytest tests -q`。測試涵蓋 Lua 5.1 語法、TOC 載入、版面遷移、施法事件、多語言回退及設定生命週期，視窗測試額外涵蓋 Lua 5.5。GitHub Actions 在推送及拉取請求時執行測試。
 
-執行 `python tools/package.py` 產生 `dist/NeonCast.zip`。模組邊界及新增語言方式見 [開發說明](docs/DEVELOPMENT.md)。
+執行 `python tools/package.py` 產生 `dist/NeonCast-<版本>.zip`。模組邊界及新增語言方式見 [開發說明](docs/DEVELOPMENT.md)。
+
+玩家安裝包僅包含執行檔案、材質、圖示及授權；GitHub 自動附帶的 Source code 壓縮檔是開發原始碼。後續直接在 `main` 開發，版本標籤觸發自動發版，詳見[發版流程](docs/RELEASING.md)。

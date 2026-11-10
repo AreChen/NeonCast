@@ -6,7 +6,7 @@ NeonCast 是《魔兽世界》永恒服的个人施法条插件，基于 Kefer �
 
 ## 安装与使用
 
-将 `NeonCast` 文件夹放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 避免重复显示。输入 `/nc`、`/neoncast` 或点击小地图按钮打开设置。配置按角色保存。
+从 [GitHub Releases](https://github.com/AreChen/NeonCast/releases) 下载 **NeonCast-<版本>.zip**，解压后将 `NeonCast` 文件夹放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 避免重复显示。输入 `/nc`、`/neoncast` 或点击小地图按钮打开设置。配置按角色保存。
 
 打开设置时仍显示真实施法；启用「预览／移动施法条」后才显示演示并允许拖动。关闭设置或进入战斗会结束预览。也可以使用 X/Y 控件调整位置。设置窗口会根据屏幕空间自动缩放。
 
@@ -28,4 +28,6 @@ NeonCast 是《魔兽世界》永恒服的个人施法条插件，基于 Kefer �
 
 安装 `requirements-dev.txt` 中的依赖，执行 `python -m pytest tests -q`。测试覆盖 Lua 5.1 语法、TOC 加载、布局迁移、施法事件、多语言回退与设置生命周期；窗口测试额外覆盖 Lua 5.5。GitHub Actions 在推送及拉取请求时运行测试。
 
-执行 `python tools/package.py` 生成 `dist/NeonCast.zip`。模块边界与新增语言的方式见 [开发说明](docs/DEVELOPMENT.md)。
+执行 `python tools/package.py` 生成 `dist/NeonCast-<版本>.zip`。模块边界与新增语言的方式见 [开发说明](docs/DEVELOPMENT.md)。
+
+玩家安装包仅包含运行文件、材质、图标和许可证；GitHub 自动附带的 Source code 压缩包是开发源码。后续直接在 `main` 开发，版本标签触发自动发版，详见[发版流程](docs/RELEASING.md)。
