@@ -2,7 +2,7 @@
 ## Title: NeonCast
 ## Notes: Modern player cast bar for WoW Forever.
 ## Author: NeonCast contributors; based on ChromaCast by Kefer
-## Version: 0.3.0-beta.3
+## Version: 0.3.0-beta.4
 ## OptionalDeps: LibSharedMedia-3.0, SharedMedia, FontManager
 ## SavedVariablesPerCharacter: NeonCastDB
 

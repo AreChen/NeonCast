@@ -10,8 +10,8 @@
 4. 提交并推送 `main`，然后创建并推送匹配的标签：
 
    ```sh
-   git tag -a v0.3.0-beta.3 -m 'NeonCast 0.3.0-beta.3'
-   git push origin v0.3.0-beta.3
+   git tag -a v0.3.0-beta.4 -m 'NeonCast 0.3.0-beta.4'
+   git push origin v0.3.0-beta.4
    ```
 
    示例版本仅供本次发布使用；后续必须换成新版本。
