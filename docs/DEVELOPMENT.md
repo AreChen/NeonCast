@@ -1,6 +1,6 @@
 # Modules and localization
 
-The TOC is the load-order contract. Modules exchange explicit services through the private addon namespace (`ns`); only the two functions required by `Bindings.xml` are exported as addon globals.
+The TOC is the Lua/UI load-order contract. Root `Bindings.xml` is discovered automatically by the client's separate keybinding loader; never add it to the TOC or include it from a UI XML file. The packaging tool includes it explicitly. Modules exchange explicit services through the private addon namespace (`ns`); only the two functions required by `Bindings.xml` are exported as addon globals.
 
 | File | Responsibility |
 | --- | --- |

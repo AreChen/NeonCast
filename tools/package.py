@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def package(output=None):
     output = output or ROOT/'dist'/'NeonCast.zip'
     output.parent.mkdir(parents=True,exist_ok=True)
-    paths = {ROOT/'NeonCast.toc', ROOT/'LICENSE'}
+    # Bindings.xml uses WoW's dedicated binding loader and must not be listed in the TOC.
+    paths = {ROOT/'NeonCast.toc', ROOT/'Bindings.xml', ROOT/'LICENSE'}
     for line in (ROOT/'NeonCast.toc').read_text().splitlines():
         if line and not line.startswith('#'):
             paths.add(ROOT/line)
