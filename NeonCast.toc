@@ -2,12 +2,27 @@
 ## Title: NeonCast
 ## Notes: Modern player cast bar for WoW Forever.
 ## Author: NeonCast contributors; based on ChromaCast by Kefer
-## Version: 0.2.0
+## Version: 0.3.0-beta.2
 ## OptionalDeps: LibSharedMedia-3.0, SharedMedia, FontManager
 ## SavedVariablesPerCharacter: NeonCastDB
 
 Locale.lua
-CraftProgress.lua
+Locales/enUS.lua
+Locales/zhCN.lua
+Locales/zhTW.lua
+Locales/Init.lua
 Data.lua
+Modules/Config.lua
+Modules/Profiles.lua
+Modules/CraftProgress.lua
+Modules/CastResponse.lua
+Modules/Spells.lua
+UI/Theme.lua
+Modules/Bar.lua
+Modules/Cast.lua
 Core.lua
+UI/Navigation.lua
+UI/Widgets.lua
 Options.lua
+Minimap.lua
+Bindings.xml

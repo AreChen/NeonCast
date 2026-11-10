@@ -1,12 +1,12 @@
 from pathlib import Path
-from lupa import LuaRuntime
+from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parents[1]
 
 def test_cast_latency_matches_guid_and_clears_stale_events():
     lua = LuaRuntime(unpack_returned_tuples=True)
     ns = lua.table()
-    lua.execute((ROOT / 'CraftProgress.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
+    lua.execute((ROOT / 'Modules/CastResponse.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
     p = ns.CastLatency
     p.CastChanged(10)
     p.Sent('first', 10)
@@ -30,7 +30,7 @@ def test_clock_prefers_precise_and_reports_sub_millisecond():
     lua = LuaRuntime(unpack_returned_tuples=True)
     ns = lua.table()
     lua.execute('function GetTime() return 10 end; function GetTimePreciseSec() return 10.123456 end')
-    lua.execute((ROOT / 'CraftProgress.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
+    lua.execute((ROOT / 'Modules/CastResponse.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
     p = ns.CastLatency
     assert p.Now() == 10.123456
     p.CastChanged(10)
@@ -48,7 +48,7 @@ def test_clock_prefers_precise_and_reports_sub_millisecond():
 def test_cast_latency_uses_cast_change_before_sent_and_consumes_it():
     lua = LuaRuntime(unpack_returned_tuples=True)
     ns = lua.table()
-    lua.execute((ROOT / 'CraftProgress.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
+    lua.execute((ROOT / 'Modules/CastResponse.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
     p = ns.CastLatency
     p.CastChanged(10)
     p.Sent('craft', 10.120)
@@ -60,10 +60,10 @@ def test_cast_latency_uses_cast_change_before_sent_and_consumes_it():
     assert p.Start('stale', 30.05) is None
 
 
-def test_latency_display_keeps_existing_text_when_measurement_missing():
+def test_response_display_marks_missing_sample():
     lua = LuaRuntime(unpack_returned_tuples=True)
     ns = lua.table()
-    lua.execute((ROOT / 'CraftProgress.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
+    lua.execute((ROOT / 'Modules/CastResponse.lua').read_text(encoding='utf-8-sig'), 'NeonCast', ns)
     p = ns.CastLatency
     bar = lua.eval('{ latencyText = { SetText = function(self, value) self.value = value end } }')
     p.UpdateText(bar, 0.0008)
@@ -71,8 +71,8 @@ def test_latency_display_keeps_existing_text_when_measurement_missing():
     p.UpdateText(bar, 0.0529)
     assert bar.latencyText.value == '52 ms'
     p.UpdateText(bar, None)
-    assert bar.latencyText.value == '52 ms'
+    assert bar.latencyText.value == '-- ms'
     p.ClearText(bar)
     assert bar.latencyText.value == ''
     p.UpdateText(bar, None)
-    assert bar.latencyText.value == ''
+    assert bar.latencyText.value == '-- ms'

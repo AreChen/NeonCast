@@ -1,0 +1,4 @@
+<Bindings xmlns="http://www.blizzard.com/wow/ui/">
+    <Binding name="NEONCAST_OPTIONS" header="NEONCAST">NeonCast_ToggleOptions()</Binding>
+    <Binding name="NEONCAST_PREVIEW">NeonCast_TogglePreview()</Binding>
+</Bindings>

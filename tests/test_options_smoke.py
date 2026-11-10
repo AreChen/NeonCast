@@ -1,60 +1,101 @@
-from pathlib import Path
-from lupa import LuaRuntime
+import pytest
+from support import addon
+from lupa.lua51 import LuaRuntime as Lua51
+from lupa.lua55 import LuaRuntime as Lua55
 
-ROOT = Path(__file__).resolve().parents[1]
+@pytest.mark.parametrize('runtime',[Lua51,Lua55])
+def test_options_open_navigate_preview_and_close(runtime):
+    lua, ns = addon(gamepad=True,runtime=runtime)
+    bar=ns.GetBar()
+    ns.ToggleOptions()
+    assert ns.OptionsFrame.IsShown(ns.OptionsFrame)
+    assert not bar.unlocked
+    assert lua.globals().navShown == 1
+    for key in ['layout','behavior','latencyPage','appearance']:
+        # Navigation labels are font strings, not button text in the existing custom tabs.
+        lua.execute("for _,f in ipairs(frames) do if f.marker and f.scripts.OnClick then f:Click() end end")
+    ns.TogglePreview()
+    assert bar.unlocked
+    ns.ToggleOptions()
+    assert not bar.unlocked
+    assert lua.globals().navHidden == 1
 
-def test_options_open_navigate_and_close_with_mock_ui():
-    lua = LuaRuntime(unpack_returned_tuples=True)
-    lua.execute(r'''
-        unpack = table.unpack; tinsert = table.insert
-        UISpecialFrames = {}; SlashCmdList = {}; Enum = nil
-        local frames = {}
-        local methods = {}
-        local mt = {__index = function(self,k) return methods[k] or function() end end}
-        function CreateFrame(kind, name, parent, template)
-            local f = setmetatable({shown=true,scripts={},kind=kind,name=name}, mt)
-            frames[#frames+1] = f
-            return f
-        end
-        function methods:CreateTexture() return CreateFrame('Texture') end
-        function methods:CreateFontString() return CreateFrame('FontString') end
-        function methods:GetThumbTexture() return CreateFrame('Texture') end
-        function methods:SetScript(event, fn) self.scripts[event] = fn end
-        function methods:HookScript(event, fn) self.scripts[event] = fn end
-        function methods:Hide() self.shown=false; if self.scripts.OnHide then self.scripts.OnHide(self) end end
-        function methods:Show() self.shown=true; if self.scripts.OnShow then self.scripts.OnShow(self) end end
-        function methods:SetShown(value) if value then self:Show() else self:Hide() end end
-        function methods:IsShown() return self.shown end
-        function methods:GetWidth() return 1000 end
-        function methods:GetHeight() return 700 end
-        function methods:GetStringWidth() return 50 end
-        function methods:GetRight() return 0 end
-        function methods:GetChecked() return false end
-        function methods:SetText(v) self.text=v end
-        UIParent=CreateFrame('UIParent'); Minimap=CreateFrame('Minimap'); GameTooltip=CreateFrame('Tooltip')
-        local function noop() end
-        local L=setmetatable({}, {__index=function(_,k) return k end})
-        local cfg={width=240,height=21,fontSize=12,cardPadding=9,iconScale=1,glowIntensity=.95,fillOpacity=.22,backgroundOpacity=.96,fadeTime=1,tickWidth=1,borderSize=2,latencyFontSize=11,showLatencyText=true,showIcon=true,showLatency=true,showQueue=true,showGlow=true,pulseGlow=true}
-        local limits={}
-        for _,k in ipairs({'width','height','fontSize','cardPadding','iconScale','glowIntensity','fillOpacity','backgroundOpacity','fadeTime','tickWidth','latencyFontSize'}) do limits[k]={1,100,1} end
-        local bar=CreateFrame('Bar'); bar.px=1
-        ns={L=L,CONFIG=cfg,LIMITS=limits,PALETTE={},COLOR_ALPHA={},GetBar=function() return bar end,
-            IsDefault=function() return true end,GetQueueMs=function() return 400 end,
-            GetPartColor=function() return 1,0,0,0.4 end,
-            GetPosition=function() return 0,0 end, GetBarShift=function() return 0 end,
-            Range=function() return 1,100 end,SetUnlocked=noop,SetSetting=noop,SetPosition=noop,
-            Redraw=noop,RestoreDefaults=noop,SetLatencyFont=noop,ColorUsable=function() return true end}
-        NeonCastDB={config={}}
-        function navigate()
-            for _, f in ipairs(frames) do
-                if f.kind == 'Button' and f.scripts.OnClick and not rawget(f, 'name') then
-                    -- Navigation buttons have the colored selection marker.
-                    if rawget(f, 'marker') then f.scripts.OnClick(f) end
-                end
-            end
-        end
-    ''')
-    lua.execute((ROOT / 'Options.lua').read_text(encoding='utf-8-sig'), 'NeonCast', lua.globals().ns)
-    lua.globals().ns.ToggleOptions()
-    lua.globals().navigate()
-    lua.globals().ns.ToggleOptions()
+
+def test_combat_closes_settings_ends_preview_and_blocks_reopening():
+    lua, ns=addon(gamepad=True)
+    ns.TogglePreview()
+    lua.execute("combat=true;dispatch('PLAYER_REGEN_DISABLED')")
+    assert not ns.OptionsFrame.IsShown(ns.OptionsFrame)
+    assert not ns.GetBar().unlocked
+    ns.ToggleOptions()
+    assert not ns.OptionsFrame.IsShown(ns.OptionsFrame)
+    lua.execute("combat=false;dispatch('PLAYER_REGEN_ENABLED')")
+    ns.ToggleOptions()
+    assert ns.OptionsFrame.IsShown(ns.OptionsFrame)
+
+
+def test_small_screen_scales_panel_and_queue_reset_is_explicit():
+    lua, ns=addon()
+    lua.execute('UIParent:SetSize(800,500)')
+    ns.ToggleOptions()
+    assert ns.OptionsFrame.GetScale(ns.OptionsFrame)*620 <= 500-24
+    lua.execute("for _,f in ipairs(frames) do if f.marker and f.scripts.OnClick then f:Click() end end")
+    # Select Casting by its navigation index.
+    lua.execute("local n=0;for _,f in ipairs(frames) do if f.marker then n=n+1;if n==3 then f:Click() end end end")
+    lua.globals().clickText(ns.L.queueReset)
+    assert lua.globals().queueWindow == 400
+
+
+def test_native_navigation_lifecycle_and_unavailable_helper_fallback():
+    lua, ns=addon(gamepad=True)
+    ns.ToggleOptions()
+    assert ns.OptionsFrame.neonNavActive
+    lua.execute("gamepad=false;dispatch('INPUT_DEVICE_INTERFACE_TRANSITION')")
+    assert not ns.OptionsFrame.neonNavActive
+    assert lua.globals().navHidden==1
+    lua.execute("gamepad=true;dispatch('INPUT_DEVICE_INTERFACE_TRANSITION')")
+    assert lua.globals().navShown==2
+    ns.OptionsFrame.SmartNavigationCloseHandler()
+    assert not ns.OptionsFrame.IsShown(ns.OptionsFrame)
+    assert lua.globals().navHidden==2
+    lua.execute('GamepadMode=nil;SmartNavigation_MarkFrameIgnored=nil')
+    ns.ToggleOptions()
+    assert ns.OptionsFrame.IsShown(ns.OptionsFrame)
+
+
+def test_controller_buttons_adjust_settings_presets_and_fonts_without_text_entry():
+    lua, ns=addon(gamepad=True)
+    ns.ToggleOptions()
+    lua.globals().clickText(ns.L.largePreset)
+    assert ns.CONFIG.fontSize==18
+    # Select response page, cycle font list through buttons using actual handlers.
+    lua.execute("local n=0;for _,f in ipairs(frames) do if f.marker then n=n+1;if n==4 then f:Click() end end end")
+    lua.execute("LibStub=function() return {List=function() return {'Test font'} end,Fetch=function() return 'Fonts/Test.ttf' end} end")
+    lua.globals().clickText(ns.L.fontNext)
+    assert lua.globals().NeonCastDB.latencyFont=='Fonts/Test.ttf'
+    lua.globals().clickText(ns.L.fontPrev)
+    assert lua.globals().NeonCastDB.latencyFont is None
+    # Move to layout, then operate a +/- button and its larger-step modifier.
+    lua.execute("local n=0;for _,f in ipairs(frames) do if f.marker then n=n+1;if n==2 then f:Click() end end end")
+    lua.execute("local w=ns.CONFIG.width;for _,f in ipairs(frames) do if f.kind=='Button' and f:IsVisible() and f.scripts.OnClick and f.width==26 then f:Click();break end end;assert(ns.CONFIG.width==w-1)")
+    lua.execute("IsShiftKeyDown=function() return true end;local w=ns.CONFIG.width;for _,f in ipairs(frames) do if f.kind=='Button' and f:IsVisible() and f.scripts.OnClick and f.width==26 then f:Click();break end end;assert(ns.CONFIG.width==w-10)")
+
+
+def test_gamepad_hud_modifier_enables_coarse_steps_without_keyboard():
+    lua, ns=addon(gamepad=True)
+    ns.ToggleOptions()
+    lua.execute("local n=0;for _,f in ipairs(frames) do if f.marker then n=n+1;if n==2 then f:Click() end end end")
+    lua.execute("GamepadMode.IsHUDBindingModifierDown=function() return true end;local w=ns.CONFIG.width;for _,f in ipairs(frames) do if f.kind=='Button' and f:IsVisible() and f.scripts.OnClick and f.width==26 then f:Click();break end end;assert(ns.CONFIG.width==w-10)")
+
+
+def test_theme_selection_redraws_live_cast_and_preserves_saved_custom_accent():
+    lua, ns=addon(saved='{config={},accent={r=.3,g=.4,b=.5}}')
+    assert ns.Theme.Accent().r == .3
+    ns.ToggleOptions()
+    # Operate the appearance swatch handler, not just the palette service.
+    lua.execute("for _,f in ipairs(frames) do if f.kind=='Button' and f.width==26 and f.height==26 and f:IsVisible() and f.neonFocus and f.scripts.OnClick then f:Click();break end end")
+    assert lua.globals().NeonCastDB.accent.r == .2
+    assert ns.Theme.Accent().b == 1
+    ns.RestoreDefaults()
+    ns.RefreshOptions()
+    assert ns.Theme.Accent().r == .2

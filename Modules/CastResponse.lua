@@ -1,28 +1,3 @@
-local _, ns = ...
-local P = {}
-ns.CraftProgress = P
-local recipe, total, completed
-
-function P.Reset()
-    recipe, total, completed = nil, nil, nil
-end
-function P.Begin(id, count)
-    P.Reset()
-    if type(id) ~= "number" or type(count) ~= "number" or count <= 1 or count % 1 ~= 0 then return end
-    recipe, total, completed = id, count, 0
-end
-function P.Label(id)
-    if issecretvalue and issecretvalue(id) then return nil end
-    if not recipe or id ~= recipe then return nil end
-    return (completed + 1) .. "/" .. total
-end
-function P.Succeeded(id)
-    if issecretvalue and issecretvalue(id) then return end
-    if not recipe or id ~= recipe then return end
-    completed = completed + 1
-    if completed >= total then P.Reset() end
-end
-
 -- Event-paired cast latency tracking.
 do
 local _, ns = ...
@@ -68,10 +43,10 @@ function M.Start(guid, now)
     return now - sent
 end
 
--- A missing sample leaves the visible value unchanged until the bar is hidden.
+-- Missing samples are explicit, so a previous cast is never mistaken for a fresh sample.
 function M.UpdateText(bar, latency)
-    if latency == nil or not bar.latencyText then return end
-    local display = string.format("%d ms", math.floor(latency * 1000))
+    if not bar.latencyText then return end
+    local display = latency and string.format("%d ms", math.floor(latency * 1000)) or "-- ms"
     if display ~= bar.latencyDisplay then
         bar.latencyText:SetText(display)
         bar.latencyDisplay = display

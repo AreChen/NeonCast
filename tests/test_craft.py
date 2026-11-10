@@ -1,11 +1,11 @@
 from pathlib import Path
-from lupa import LuaRuntime
+from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parents[1]
 
 def load():
     lua = LuaRuntime(unpack_returned_tuples=True)
-    path = ROOT / 'CraftProgress.lua'
+    path = ROOT / 'Modules/CraftProgress.lua'
     if not path.exists():
         return None
     namespace = lua.table()
