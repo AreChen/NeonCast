@@ -4,6 +4,8 @@
 
 NeonCast is a personal cast bar for World of Warcraft Forever, based on Kefer's ChromaCast under the MIT license.
 
+![NeonCast settings and cast bar in World of Warcraft Forever](docs/images/neoncast-in-game.jpg)
+
 ## Installation and use
 
 Download **NeonCast-<version>.zip** from [GitHub Releases](https://github.com/AreChen/NeonCast/releases), extract it, and place the `NeonCast` folder in `Interface/AddOns/NeonCast` and disable ChromaCast to avoid overlapping bars. Open settings with `/nc`, `/neoncast`, or the minimap button. Settings are saved per character.

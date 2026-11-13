@@ -4,6 +4,8 @@
 
 NeonCast 是《魔兽世界》永恒服的个人施法条插件，基于 Kefer 的 ChromaCast，保留 MIT 授权。
 
+![NeonCast 游戏内设置与施法条](docs/images/neoncast-in-game.jpg)
+
 ## 安装与使用
 
 从 [GitHub Releases](https://github.com/AreChen/NeonCast/releases) 下载 **NeonCast-<版本>.zip**，解压后将 `NeonCast` 文件夹放入 `Interface/AddOns/NeonCast`，停用 ChromaCast 避免重复显示。输入 `/nc`、`/neoncast` 或点击小地图按钮打开设置。配置按角色保存。
